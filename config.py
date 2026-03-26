@@ -78,10 +78,13 @@ groq_client = None
 if GROQ_API_KEY:
     try:
         from groq import Groq
-        groq_client = Groq(api_key=GROQ_API_KEY)
+        groq_client = Groq(
+            api_key=GROQ_API_KEY
+        )
         print("✅ Groq AI aktif!")
     except Exception as e:
         print(f"⚠️ Groq AI başlatılamadı: {e}")
+        groq_client = None
 else:
     print("⚠️ GROQ_API_KEY bulunamadı! AI komutları çalışmayacak.")
 
