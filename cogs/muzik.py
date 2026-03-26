@@ -30,25 +30,55 @@ class Muzik(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def cog_load(self) -> None:
-        nodes = [
-            wavelink.Node(
-                uri="http://lavalink.clxud.pro:2333",
-                password="youshallnotpass",
-                identifier="Clxud-1"
-            ),
-            wavelink.Node(
-                uri="http://lavalink.jirayu.net:13592",
-                password="youshallnotpass",
-                identifier="Jirayu-1"
-            )
-        ]
-        try:
-            await wavelink.Pool.connect(nodes=nodes, client=self.bot)
-            print("✅ Lavalink node'ları bağlandı!")
-        except Exception as e:
-            print(f"⚠️ Lavalink bağlantı hatası: {e}")
-
+   async def cog_load(self) -> None:
+    nodes = [
+        # Ana sunucular
+        wavelink.Node(
+            uri="http://lava.link:80",
+            password="anything",
+            identifier="LavaLink-Main"
+        ),
+        wavelink.Node(
+            uri="http://narco.boats:2269",
+            password="glasshost1984",
+            identifier="Narco-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.lexnet.cc:2333",
+            password="lexn3tl@val!nk",
+            identifier="LexNet-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.alfari.id:14593",
+            password="catfein",
+            identifier="Alfari-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.techpoint.world:2333",
+            password="techpoint",
+            identifier="TechPoint-1"
+        ),
+        wavelink.Node(
+            uri="http://lava1.horizxon.tech:80",
+            password="horizxon.tech",
+            identifier="Horizxon-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.coldservices.eu:2333",
+            password="coldservices",
+            identifier="ColdServices-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.shivambot.in:80",
+            password="shivambot.in",
+            identifier="ShivamBot-1"
+        )
+    ]
+    try:
+        await wavelink.Pool.connect(nodes=nodes, client=self.bot)
+        print("✅ Lavalink node'ları bağlandı!")
+    except Exception as e:
+        print(f"⚠️ Lavalink bağlantı hatası: {e}")
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload) -> None:
         print(f"✅ Lavalink node hazır: {payload.node.identifier}")
