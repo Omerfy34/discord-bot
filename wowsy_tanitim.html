@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <title>⚡ WOWSY Bot - Tek Bot, Sonsuz Eğlence!</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0f2040 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animasyonlu Arka Plan */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .bg-animation span {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+        
+        .bg-animation span:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .bg-animation span:nth-child(2) { left: 20%; animation-delay: 2s; width: 30px; height: 30px; }
+        .bg-animation span:nth-child(3) { left: 35%; animation-delay: 4s; }
+        .bg-animation span:nth-child(4) { left: 50%; animation-delay: 6s; width: 15px; height: 15px; }
+        .bg-animation span:nth-child(5) { left: 65%; animation-delay: 8s; }
+        .bg-animation span:nth-child(6) { left: 80%; animation-delay: 10s; width: 25px; height: 25px; }
+        .bg-animation span:nth-child(7) { left: 90%; animation-delay: 12s; }
+        
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+        
+        .logo {
+            font-size: 4em;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ffd700, #ffaa00, #ffd700);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+        
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+        
+        .tagline {
+            font-size: 1.4em;
+            color: #aaa;
+            margin-top: 10px;
+            font-weight: 300;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(90deg, #00c853, #00e676);
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-top: 25px;
+            box-shadow: 0 4px 20px rgba(0, 200, 83, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0, 200, 83, 0.4); }
+            50% { box-shadow: 0 4px 40px rgba(0, 200, 83, 0.8); }
+        }
+        
+        /* Davet Butonu */
+        .invite-btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #5865F2, #7289DA);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 25px rgba(88, 101, 242, 0.4);
+            border: 2px solid transparent;
+        }
+        
+        .invite-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 35px rgba(88, 101, 242, 0.6);
+            background: linear-gradient(135deg, #7289DA, #5865F2);
+        }
+        
+        .invite-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .invite-btn-small {
+            display: inline-block;
+            padding: 10px 25px;
+            background: rgba(88, 101, 242, 0.2);
+            color: #5865F2;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.95em;
+            border: 1px solid #5865F2;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        
+        .invite-btn-small:hover {
+            background: #5865F2;
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            padding: 30px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px 35px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* Features */
+        .features {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 40px;
+            color: #ffd700;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+        
+        .feature-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(255, 215, 0, 0.5);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .feature-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+        
+        .feature-desc {
+            color: #aaa;
+            line-height: 1.7;
+            font-size: 0.95em;
+        }
+        
+        .feature-commands {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .cmd-tag {
+            display: inline-block;
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin: 3px;
+            font-family: monospace;
+        }
+        
+        /* Oyunlar */
+        .games-showcase {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 50px auto;
+            max-width: 1000px;
+        }
+        
+        .game-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .game-item {
+            background: rgba(255,255,255,0.05);
+            padding: 15px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+        
+        .game-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .game-emoji {
+            font-size: 1.8em;
+        }
+        
+        .game-info h4 {
+            font-size: 1em;
+            margin-bottom: 3px;
+        }
+        
+        .game-info span {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 50px 20px;
+            margin-top: 50px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .footer-logo {
+            font-size: 2em;
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+        
+        .footer-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5em;
+            }
+            
+            .tagline {
+                font-size: 1.1em;
+            }
+            
+            .stats {
+                gap: 20px;
+            }
+            
+            .section-title {
+                font-size: 1.8em;
+            }
+            
+            .invite-btn {
+                font-size: 1em;
+                padding: 12px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animasyonlu Arka Plan -->
+    <div class="bg-animation">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <h1 class="logo">⚡ WOWSY BOT</h1>
+        <p class="tagline">Tek Bot, Sonsuz Eğlence!</p>
+        <div class="status-badge">✅ Çevrimiçi ve Aktif</div>
+        
+        <!-- Davet Butonu -->
+        <div style="margin-top: 30px;">
+            <a href="https://discord.com/oauth2/authorize?client_id=1485291664502427708" target="_blank" class="invite-btn">
+                🚀 Sunucuna Ekle
+            </a>
+        </div>
+    </header>
+    
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-number">60+</div>
+            <div class="stat-label">Komut</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">7/24</div>
+            <div class="stat-label">Online</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">6</div>
+            <div class="stat-label">Kategori</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">9</div>
+            <div class="stat-label">Oyun</div>
+        </div>
+    </div>
+    
+    <!-- Features -->
+    <section class="features">
+        <h2 class="section-title">🚀 Özellikler</h2>
+        
+        <div class="feature-grid">
+            <!-- Müzik -->
+            <div class="feature-card">
+                <div class="feature-icon">🎵</div>
+                <h3 class="feature-title">Müzik Sistemi</h3>
+                <p class="feature-desc">
+                    YouTube'dan yüksek kalitede müzik çal! Kuyruk sistemi, 
+                    duraklat/devam, şarkı atlama ve daha fazlası.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/play</span>
+                    <span class="cmd-tag">/pause</span>
+                    <span class="cmd-tag">/skip</span>
+                    <span class="cmd-tag">/queue</span>
+                    <span class="cmd-tag">/leave</span>
+                </div>
+            </div>
+            
+            <!-- Ekonomi -->
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3 class="feature-title">Ekonomi Sistemi</h3>
+                <p class="feature-desc">
+                    Sanal para kazan, bankaya yatır, arkadaşlarına gönder! 
+                    Günlük ödüller, streak bonusları ve zenginler sıralaması.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/günlük</span>
+                    <span class="cmd-tag">/çalış</span>
+                    <span class="cmd-tag">/bakiye</span>
+                    <span class="cmd-tag">/yatır</span>
+                    <span class="cmd-tag">/zenginler</span>
+                </div>
+            </div>
+            
+            <!-- Moderasyon -->
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3 class="feature-title">Moderasyon</h3>
+                <p class="feature-desc">
+                    Sunucunu kolayca yönet! Kullanıcı atma, yasaklama, 
+                    susturma, mesaj silme ve uyarı sistemi.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/kick</span>
+                    <span class="cmd-tag">/ban</span>
+                    <span class="cmd-tag">/timeout</span>
+                    <span class="cmd-tag">/sil</span>
+                    <span class="cmd-tag">/uyar</span>
+                </div>
+            </div>
+            
+            <!-- Yapay Zeka -->
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">Yapay Zeka</h3>
+                <p class="feature-desc">
+                    Groq AI ile güçlendirilmiş! Sorular sor, metin çevir, 
+                    hikaye oluştur ve özetler al.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/ai</span>
+                    <span class="cmd-tag">/tercume</span>
+                    <span class="cmd-tag">/hikaye</span>
+                    <span class="cmd-tag">/özet</span>
+                </div>
+            </div>
+            
+            <!-- Eğlence -->
+            <div class="feature-card">
+                <div class="feature-icon">🎲</div>
+                <h3 class="feature-title">Eğlence</h3>
+                <p class="feature-desc">
+                    Arkadaşlarınla eğlen! Şakalar, sihirli küre, 
+                    avatar görüntüleme ve sosyal komutlar.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/şaka</span>
+                    <span class="cmd-tag">/8ball</span>
+                    <span class="cmd-tag">/avatar</span>
+                    <span class="cmd-tag">/sarıl</span>
+                    <span class="cmd-tag">/tokatlat</span>
+                </div>
+            </div>
+            
+            <!-- Bilgi -->
+            <div class="feature-card">
+                <div class="feature-icon">ℹ️</div>
+                <h3 class="feature-title">Bilgi & Yardım</h3>
+                <p class="feature-desc">
+                    Sunucu ve kullanıcı bilgileri, bot istatistikleri 
+                    ve detaylı yardım menüleri.
+                </p>
+                <div class="feature-commands">
+                    <span class="cmd-tag">/ping</span>
+                    <span class="cmd-tag">/sunucu</span>
+                    <span class="cmd-tag">/kullanıcı</span>
+                    <span class="cmd-tag">/yardım</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Oyunlar -->
+    <section class="features">
+        <div class="games-showcase">
+            <h2 class="section-title">🎮 Oyunlar & Bahis</h2>
+            <p style="text-align: center; color: #aaa; margin-bottom: 10px;">
+                9 farklı oyun ile eğlencenin dibine vur!
+            </p>
+            
+            <div class="game-list">
+                <div class="game-item">
+                    <span class="game-emoji">🏹</span>
+                    <div class="game-info">
+                        <h4>Avlanma</h4>
+                        <span>Ejderha yakala!</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🎣</span>
+                    <div class="game-info">
+                        <h4>Balık Tutma</h4>
+                        <span>Balina = 1200💰</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🎰</span>
+                    <div class="game-info">
+                        <h4>Slot</h4>
+                        <span>50x JACKPOT</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🪙</span>
+                    <div class="game-info">
+                        <h4>Yazı Tura</h4>
+                        <span>2x kazanç</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🎲</span>
+                    <div class="game-info">
+                        <h4>Zar</h4>
+                        <span>6 at = 5x</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🎡</span>
+                    <div class="game-info">
+                        <h4>Rulet</h4>
+                        <span>Yeşil = 14x</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🃏</span>
+                    <div class="game-info">
+                        <h4>Blackjack</h4>
+                        <span>21'e ulaş!</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">🚀</span>
+                    <div class="game-info">
+                        <h4>Crash</h4>
+                        <span>Patlamadan çek</span>
+                    </div>
+                </div>
+                
+                <div class="game-item">
+                    <span class="game-emoji">⚔️</span>
+                    <div class="game-info">
+                        <h4>PvP Savaş</h4>
+                        <span>Arkadaşını yen</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-logo">⚡ WOWSY</div>
+        
+        <!-- Footer Davet Butonu -->
+        <a href="https://discord.com/oauth2/authorize?client_id=1485291664502427708" target="_blank" class="invite-btn-small">
+            Sunucuna Ekle
+        </a>
+        
+        <p class="footer-info" style="margin-top: 20px;">
+            Geliştirici: <span>Ömer</span>
+        </p>
+        <p style="margin-top: 15px; color: #444;">
+            /yardım yazarak tüm komutları keşfet!
+        </p>
+    </footer>
+</body>
+</html>
