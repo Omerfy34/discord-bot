@@ -6,7 +6,7 @@ import os
 import json
 from dotenv import load_dotenv
 
-# .env dosyasını yükle
+# .env dosyasını yükle (EN ÖNCE!)
 load_dotenv()
 
 # =====================================================
