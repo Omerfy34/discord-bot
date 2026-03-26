@@ -43,24 +43,24 @@ class Muzik(commands.Cog):
         self.bot = bot
 
     async def cog_load(self) -> None:
-        """Cog yüklendiğinde Lavalink node'ları bağla"""
-        nodes = [
-            wavelink.Node(
-                uri="https://lavalink.devamop.in:443",
-                password="DevamOP",
-                identifier="DevamOP-1"
-            ),
-            wavelink.Node(
-                uri="https://lavalink-replit.i0xd.repl.co:443",
-                password="i0xd",
-                identifier="i0xd-Replit"
-            ),
-            wavelink.Node(
-                uri="https://lava-v3.ajieblogs.eu.org:443",
-                password="https://dsc.gg/ajidevserver",
-                identifier="AjieDev"
-            )
-        ]
+    """Cog yüklendiğinde Lavalink node'ları bağla"""
+    nodes = [
+        wavelink.Node(
+            uri="http://lavalink.clxud.pro:2333",
+            password="youshallnotpass",
+            identifier="Clxud-1"
+        ),
+        wavelink.Node(
+            uri="http://lavalink.jirayu.net:13592",
+            password="youshallnotpass",
+            identifier="Jirayu-1"
+        ),
+        wavelink.Node(
+            uri="http://node1.kartadharta.xyz:443",
+            password="kdlavalink",
+            identifier="Karta-1"
+        )
+    ]
         
         try:
             await wavelink.Pool.connect(nodes=nodes, client=self.bot)
