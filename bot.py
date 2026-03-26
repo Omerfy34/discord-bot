@@ -303,7 +303,14 @@ async def main():
     
     # Cog'ları yükle
     async with bot:
-        await load_cogs()
+        try:
+            print("📦 Cog'lar yükleniyor...")
+            await load_cogs()
+            print("✅ Tüm cog'lar yüklendi!")
+        except Exception as e:
+            print(f"❌ Cog yükleme hatası: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Botu başlat
         if not DISCORD_TOKEN:
@@ -316,7 +323,9 @@ async def main():
         except discord.LoginFailure:
             print("❌ Discord Token geçersiz!")
         except Exception as e:
-            print(f"❌ Hata: {e}")
+            print(f"❌ Bot başlatma hatası: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     asyncio.run(main())
