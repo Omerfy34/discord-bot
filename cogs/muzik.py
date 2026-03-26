@@ -1,11 +1,12 @@
 # =====================================================
-# 🎵 WOWSY BOT - MÜZİK KOMUTLARI
+# 🎵 WOWSY BOT - MÜZİK KOMUTLARI (FİNAL)
 # =====================================================
 
 import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
+import random
 import yt_dlp
 
 from config import FFMPEG_OPTIONS
@@ -18,11 +19,27 @@ from utils import guvenli_cevap
 # Müzik kuyrukları (sunucu bazlı)
 music_queues = {}
 
+# Şu an çalan şarkı bilgisi (sunucu bazlı)
+now_playing = {}
+
 def get_queue(guild_id):
     """Sunucu için müzik kuyruğunu döndür"""
     if guild_id not in music_queues:
         music_queues[guild_id] = []
     return music_queues[guild_id]
+
+def set_now_playing(guild_id, title):
+    """Şu an çalan şarkıyı kaydet"""
+    now_playing[guild_id] = title
+
+def get_now_playing(guild_id):
+    """Şu an çalan şarkıyı döndür"""
+    return now_playing.get(guild_id, None)
+
+def clear_now_playing(guild_id):
+    """Şu an çalan şarkıyı temizle"""
+    if guild_id in now_playing:
+        del now_playing[guild_id]
 
 def search_and_get_audio(query):
     """Şarkı ara ve audio URL + başlık döndür"""
@@ -65,11 +82,51 @@ def search_and_get_audio(query):
                 return None, None
             
             title = info.get('title', 'Bilinmeyen Şarkı')
-            return audio_url, title
+            duration = info.get('duration', 0)
+            thumbnail = info.get('thumbnail', None)
+            
+            return audio_url, {'title': title, 'duration': duration, 'thumbnail': thumbnail}
             
     except Exception as e:
         print(f"[HATA] search_and_get_audio: {e}")
         return None, None
+
+async def ensure_voice_connection(channel, existing_vc=None):
+    """Ses kanalına bağlantıyı garanti et"""
+    try:
+        if existing_vc:
+            if existing_vc.channel.id == channel.id:
+                return existing_vc, None
+            await existing_vc.move_to(channel)
+            await asyncio.sleep(0.5)
+            return existing_vc, None
+        
+        # Yeni bağlantı
+        vc = await channel.connect()
+        
+        # Bağlantı hazır olana kadar bekle (maksimum 5 saniye)
+        for i in range(10):
+            if vc.is_connected():
+                break
+            await asyncio.sleep(0.5)
+        
+        if not vc.is_connected():
+            return None, "Ses kanalına bağlanılamadı!"
+        
+        return vc, None
+        
+    except Exception as e:
+        return None, str(e)
+
+def format_duration(seconds):
+    """Saniyeyi dakika:saniye formatına çevir"""
+    if not seconds:
+        return "Bilinmiyor"
+    minutes, secs = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
 
 # =====================================================
 # 🎵 MÜZİK COG
@@ -80,6 +137,80 @@ class Muzik(commands.Cog):
         self.bot = bot
 
     # =====================================================
+    # 🔧 YARDIMCI METODLAR
+    # =====================================================
+
+    def create_play_next_callback(self, guild_id, vc, text_channel):
+        """Sonraki şarkıyı çalmak için callback oluştur"""
+        def play_next(error):
+            if error:
+                print(f"[HATA] Oynatma hatası: {error}")
+            
+            queue = get_queue(guild_id)
+            
+            if len(queue) > 0 and vc.is_connected():
+                next_song = queue.pop(0)
+                try:
+                    source = discord.FFmpegPCMAudio(next_song['url'], **FFMPEG_OPTIONS)
+                    vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
+                    
+                    # Şu an çalanı güncelle
+                    set_now_playing(guild_id, next_song['info']['title'])
+                    
+                    # Bildirim gönder
+                    embed = discord.Embed(
+                        title="🎵 Şimdi Çalıyor",
+                        description=f"**{next_song['info']['title']}**",
+                        color=discord.Color.green()
+                    )
+                    if next_song['info'].get('duration'):
+                        embed.add_field(name="⏱️ Süre", value=format_duration(next_song['info']['duration']))
+                    if next_song['info'].get('thumbnail'):
+                        embed.set_thumbnail(url=next_song['info']['thumbnail'])
+                    
+                    asyncio.run_coroutine_threadsafe(
+                        text_channel.send(embed=embed),
+                        self.bot.loop
+                    )
+                except Exception as e:
+                    print(f"[HATA] Sonraki şarkı çalınamadı: {e}")
+                    clear_now_playing(guild_id)
+            else:
+                # Kuyruk bitti
+                clear_now_playing(guild_id)
+        
+        return play_next
+
+    async def play_song(self, vc, guild_id, audio_url, song_info, text_channel):
+        """Şarkıyı çal"""
+        try:
+            source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
+            vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
+            set_now_playing(guild_id, song_info['title'])
+            return True
+        except Exception as e:
+            print(f"[HATA] Şarkı çalınamadı: {e}")
+            return False
+
+    def create_now_playing_embed(self, song_info, queue_position=None):
+        """Şimdi çalıyor embed'i oluştur"""
+        if queue_position:
+            embed = discord.Embed(title="➕ Kuyruğa Eklendi", color=discord.Color.blue())
+            embed.add_field(name="📋 Sıra", value=f"#{queue_position}", inline=True)
+        else:
+            embed = discord.Embed(title="🎵 Şimdi Çalıyor", color=discord.Color.green())
+        
+        embed.description = f"**{song_info['title']}**"
+        
+        if song_info.get('duration'):
+            embed.add_field(name="⏱️ Süre", value=format_duration(song_info['duration']), inline=True)
+        
+        if song_info.get('thumbnail'):
+            embed.set_thumbnail(url=song_info['thumbnail'])
+        
+        return embed
+
+    # =====================================================
     # 🎵 SLASH KOMUTLARI
     # =====================================================
 
@@ -87,7 +218,10 @@ class Muzik(commands.Cog):
     @app_commands.describe(şarkı="Şarkı adı veya YouTube linki")
     async def slash_play(self, interaction: discord.Interaction, şarkı: str):
         if not interaction.user.voice:
-            await guvenli_cevap(interaction, "❌ Önce bir ses kanalına katıl!", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ Önce bir ses kanalına katıl!", 
+                ephemeral=True
+            )
             return
         
         await interaction.response.defer()
@@ -95,24 +229,19 @@ class Muzik(commands.Cog):
         channel = interaction.user.voice.channel
         vc = interaction.guild.voice_client
         
+        vc, error = await ensure_voice_connection(channel, vc)
+        
+        if error:
+            await interaction.followup.send(f"❌ {error}")
+            return
+        
         if not vc:
-            try:
-                vc = await channel.connect()
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                await interaction.followup.send(f"❌ Ses kanalına katılamadım: {e}")
-                return
-        elif vc.channel != channel:
-            try:
-                await vc.move_to(channel)
-                await asyncio.sleep(0.3)
-            except Exception as e:
-                await interaction.followup.send(f"❌ Kanala taşınamadım: {e}")
-                return
+            await interaction.followup.send("❌ Ses kanalına bağlanılamadı!")
+            return
         
         await interaction.followup.send(f"🔍 Aranıyor: **{şarkı}**")
         
-        audio_url, title = search_and_get_audio(şarkı)
+        audio_url, song_info = search_and_get_audio(şarkı)
         
         if not audio_url:
             await interaction.edit_original_response(content="❌ Şarkı bulunamadı!")
@@ -120,152 +249,192 @@ class Muzik(commands.Cog):
         
         if vc.is_playing() or vc.is_paused():
             queue = get_queue(interaction.guild.id)
-            queue.append({'url': audio_url, 'title': title})
+            queue.append({'url': audio_url, 'info': song_info})
             
-            embed = discord.Embed(title="➕ Kuyruğa Eklendi", color=discord.Color.blue())
-            embed.description = f"**{title}**"
-            embed.add_field(name="📋 Sıra", value=f"#{len(queue)}")
+            embed = self.create_now_playing_embed(song_info, queue_position=len(queue))
             await interaction.edit_original_response(content=None, embed=embed)
             return
         
-        def play_next(error):
-            if error:
-                print(f"Oynatma hatası: {error}")
-            queue = get_queue(interaction.guild.id)
-            if len(queue) > 0 and vc.is_connected():
-                next_song = queue.pop(0)
-                try:
-                    source = discord.FFmpegPCMAudio(next_song['url'], **FFMPEG_OPTIONS)
-                    vc.play(source, after=play_next)
-                except Exception as e:
-                    print(f"Sonraki şarkı hatası: {e}")
+        success = await self.play_song(
+            vc, 
+            interaction.guild.id, 
+            audio_url, 
+            song_info, 
+            interaction.channel
+        )
         
-        try:
-            source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
-            vc.play(source, after=play_next)
-            
-            embed = discord.Embed(title="🎵 Şimdi Çalıyor", color=discord.Color.green())
-            embed.description = f"**{title}**"
+        if success:
+            embed = self.create_now_playing_embed(song_info)
             await interaction.edit_original_response(content=None, embed=embed)
-        except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Çalma hatası: {e}")
+        else:
+            await interaction.edit_original_response(content="❌ Şarkı çalınamadı!")
 
     @app_commands.command(name="pause", description="Müziği duraklat")
     async def slash_pause(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client:
-            await guvenli_cevap(interaction, "❌ Müzik çalmıyor!", ephemeral=True)
-            return
-        
         vc = interaction.guild.voice_client
+        
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
         
         if vc.is_playing():
             vc.pause()
-            await guvenli_cevap(interaction, "⏸️ Müzik duraklatıldı!")
+            await interaction.response.send_message("⏸️ Müzik duraklatıldı!")
+        elif vc.is_paused():
+            await interaction.response.send_message("❌ Müzik zaten duraklatılmış!", ephemeral=True)
         else:
-            await guvenli_cevap(interaction, "❌ Zaten duraklatılmış veya çalmıyor!", ephemeral=True)
+            await interaction.response.send_message("❌ Çalan müzik yok!", ephemeral=True)
 
     @app_commands.command(name="devam", description="Müziği devam ettir")
     async def slash_devam(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client:
-            await guvenli_cevap(interaction, "❌ Müzik çalmıyor!", ephemeral=True)
-            return
-        
         vc = interaction.guild.voice_client
+        
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
         
         if vc.is_paused():
             vc.resume()
-            await guvenli_cevap(interaction, "▶️ Müzik devam ediyor!")
+            await interaction.response.send_message("▶️ Müzik devam ediyor!")
         else:
-            await guvenli_cevap(interaction, "❌ Duraklatılmış şarkı yok!", ephemeral=True)
+            await interaction.response.send_message("❌ Duraklatılmış şarkı yok!", ephemeral=True)
 
     @app_commands.command(name="skip", description="Şarkıyı atla")
     async def slash_skip(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client:
-            await guvenli_cevap(interaction, "❌ Müzik çalmıyor!", ephemeral=True)
-            return
-        
         vc = interaction.guild.voice_client
+        
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
         
         if vc.is_playing() or vc.is_paused():
             vc.stop()
-            await guvenli_cevap(interaction, "⏭️ Şarkı atlandı!")
+            await interaction.response.send_message("⏭️ Şarkı atlandı!")
         else:
-            await guvenli_cevap(interaction, "❌ Atlanacak şarkı yok!", ephemeral=True)
+            await interaction.response.send_message("❌ Atlanacak şarkı yok!", ephemeral=True)
 
     @app_commands.command(name="stop", description="Müziği durdur ve kuyruğu temizle")
     async def slash_stop(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client:
-            await guvenli_cevap(interaction, "❌ Müzik çalmıyor!", ephemeral=True)
+        vc = interaction.guild.voice_client
+        
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
             return
         
-        vc = interaction.guild.voice_client
         get_queue(interaction.guild.id).clear()
-        vc.stop()
+        clear_now_playing(interaction.guild.id)
         
-        await guvenli_cevap(interaction, "⏹️ Müzik durduruldu ve kuyruk temizlendi!")
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+        
+        await interaction.response.send_message("⏹️ Müzik durduruldu ve kuyruk temizlendi!")
 
     @app_commands.command(name="leave", description="Ses kanalından ayrıl")
     async def slash_leave(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client:
-            await guvenli_cevap(interaction, "❌ Zaten kanalda değilim!", ephemeral=True)
+        vc = interaction.guild.voice_client
+        
+        if not vc:
+            await interaction.response.send_message("❌ Zaten ses kanalında değilim!", ephemeral=True)
             return
         
         get_queue(interaction.guild.id).clear()
-        await interaction.guild.voice_client.disconnect()
+        clear_now_playing(interaction.guild.id)
         
-        await guvenli_cevap(interaction, "👋 Ses kanalından ayrıldım!")
+        await vc.disconnect()
+        await interaction.response.send_message("👋 Ses kanalından ayrıldım!")
 
     @app_commands.command(name="queue", description="Müzik kuyruğunu göster")
     async def slash_queue(self, interaction: discord.Interaction):
-        q = get_queue(interaction.guild.id)
-        
-        if len(q) == 0:
-            await guvenli_cevap(interaction, "📋 Kuyruk boş!")
-            return
+        queue = get_queue(interaction.guild.id)
+        current = get_now_playing(interaction.guild.id)
         
         embed = discord.Embed(title="📋 Müzik Kuyruğu", color=discord.Color.blue())
         
-        text = ""
-        for i, song in enumerate(q[:10]):
-            text += f"**{i+1}.** {song['title'][:50]}\n"
+        if current:
+            embed.add_field(name="🎵 Şu An Çalıyor", value=f"**{current}**", inline=False)
         
-        if len(q) > 10:
-            text += f"\n... ve {len(q) - 10} şarkı daha"
+        if len(queue) == 0:
+            embed.description = "Kuyrukta şarkı yok."
+        else:
+            text = ""
+            for i, song in enumerate(queue[:10]):
+                title = song['info']['title'][:45]
+                if len(song['info']['title']) > 45:
+                    title += "..."
+                text += f"**{i+1}.** {title}\n"
+            
+            if len(queue) > 10:
+                text += f"\n*... ve {len(queue) - 10} şarkı daha*"
+            
+            embed.add_field(name="📜 Sıradaki Şarkılar", value=text, inline=False)
         
-        embed.description = text
-        embed.set_footer(text=f"Toplam: {len(q)} şarkı")
+        embed.set_footer(text=f"Toplam: {len(queue)} şarkı kuyrukta")
         
-        await guvenli_cevap(interaction, embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="join", description="Ses kanalına katıl")
     async def slash_join(self, interaction: discord.Interaction):
         if not interaction.user.voice:
-            await guvenli_cevap(interaction, "❌ Önce bir ses kanalına katıl!", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ Önce bir ses kanalına katıl!", 
+                ephemeral=True
+            )
             return
         
         channel = interaction.user.voice.channel
         vc = interaction.guild.voice_client
         
-        try:
-            if vc:
-                if vc.channel.id == channel.id:
-                    await guvenli_cevap(interaction, f"✅ Zaten **{channel.name}** kanalındayım!")
-                    return
-                await vc.move_to(channel)
-                await guvenli_cevap(interaction, f"🔊 **{channel.name}** kanalına taşındım!")
-            else:
-                await channel.connect()
-                await guvenli_cevap(interaction, f"🔊 **{channel.name}** kanalına katıldım!")
-        except Exception as e:
-            await guvenli_cevap(interaction, f"❌ Hata: {e}", ephemeral=True)
+        vc, error = await ensure_voice_connection(channel, vc)
+        
+        if error:
+            await interaction.response.send_message(f"❌ {error}", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(f"🔊 **{channel.name}** kanalına katıldım!")
 
     @app_commands.command(name="np", description="Şu an çalan şarkıyı göster")
     async def slash_np(self, interaction: discord.Interaction):
-        if not interaction.guild.voice_client or not interaction.guild.voice_client.is_playing():
-            await guvenli_cevap(interaction, "❌ Şu an çalan şarkı yok!", ephemeral=True)
+        vc = interaction.guild.voice_client
+        current = get_now_playing(interaction.guild.id)
+        
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
             return
         
-        await guvenli_cevap(interaction, "🎵 Şu an bir şarkı çalıyor!")
+        if not current or (not vc.is_playing() and not vc.is_paused()):
+            await interaction.response.send_message("❌ Şu an çalan şarkı yok!", ephemeral=True)
+            return
+        
+        status = "⏸️ Duraklatıldı" if vc.is_paused() else "▶️ Çalıyor"
+        
+        embed = discord.Embed(title="🎵 Şu An Çalıyor", color=discord.Color.green())
+        embed.description = f"**{current}**"
+        embed.add_field(name="Durum", value=status)
+        
+        queue = get_queue(interaction.guild.id)
+        if len(queue) > 0:
+            embed.add_field(name="Sırada", value=f"{len(queue)} şarkı")
+        
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="shuffle", description="Kuyruğu karıştır")
+    async def slash_shuffle(self, interaction: discord.Interaction):
+        queue = get_queue(interaction.guild.id)
+        
+        if len(queue) < 2:
+            await interaction.response.send_message("❌ Karıştırılacak yeterli şarkı yok!", ephemeral=True)
+            return
+        
+        random.shuffle(queue)
+        await interaction.response.send_message(f"🔀 Kuyruk karıştırıldı! ({len(queue)} şarkı)")
+
+    @app_commands.command(name="qclear", description="Müzik kuyruğunu temizle")
+    async def slash_qclear(self, interaction: discord.Interaction):
+        queue = get_queue(interaction.guild.id)
+        count = len(queue)
+        queue.clear()
+        
+        await interaction.response.send_message(f"🗑️ Kuyruk temizlendi! ({count} şarkı silindi)")
 
     # =====================================================
     # 🎵 PREFIX KOMUTLARI
@@ -273,6 +442,7 @@ class Muzik(commands.Cog):
 
     @commands.command(aliases=['p', 'çal', 'oynat'])
     async def play(self, ctx, *, query):
+        """Müzik çal"""
         if not ctx.author.voice:
             await ctx.send("❌ Önce bir ses kanalına katıl!")
             return
@@ -282,22 +452,17 @@ class Muzik(commands.Cog):
         channel = ctx.author.voice.channel
         vc = ctx.voice_client
         
-        if not vc:
-            try:
-                vc = await channel.connect()
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                await msg.edit(content=f"❌ Kanala katılamadım: {e}")
-                return
-        elif vc.channel != channel:
-            try:
-                await vc.move_to(channel)
-                await asyncio.sleep(0.3)
-            except Exception as e:
-                await msg.edit(content=f"❌ Kanala taşınamadım: {e}")
-                return
+        vc, error = await ensure_voice_connection(channel, vc)
         
-        audio_url, title = search_and_get_audio(query)
+        if error:
+            await msg.edit(content=f"❌ {error}")
+            return
+        
+        if not vc:
+            await msg.edit(content="❌ Ses kanalına bağlanılamadı!")
+            return
+        
+        audio_url, song_info = search_and_get_audio(query)
         
         if not audio_url:
             await msg.edit(content="❌ Şarkı bulunamadı!")
@@ -305,102 +470,137 @@ class Muzik(commands.Cog):
         
         if vc.is_playing() or vc.is_paused():
             queue = get_queue(ctx.guild.id)
-            queue.append({'url': audio_url, 'title': title})
-            await msg.edit(content=f"➕ Kuyruğa eklendi: **{title}**")
+            queue.append({'url': audio_url, 'info': song_info})
+            
+            embed = self.create_now_playing_embed(song_info, queue_position=len(queue))
+            await msg.edit(content=None, embed=embed)
             return
-        
-        def play_next(error):
-            if error:
-                print(f"Oynatma hatası: {error}")
-            queue = get_queue(ctx.guild.id)
-            if len(queue) > 0 and vc.is_connected():
-                next_song = queue.pop(0)
-                try:
-                    source = discord.FFmpegPCMAudio(next_song['url'], **FFMPEG_OPTIONS)
-                    vc.play(source, after=play_next)
-                    asyncio.run_coroutine_threadsafe(
-                        ctx.send(f"🎵 Şimdi çalıyor: **{next_song['title']}**"),
-                        self.bot.loop
-                    )
-                except Exception as e:
-                    print(f"Sonraki şarkı hatası: {e}")
         
         try:
             await msg.delete()
-            source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
-            vc.play(source, after=play_next)
-            
-            embed = discord.Embed(title="🎵 Şimdi Çalıyor", description=title, color=discord.Color.green())
+        except:
+            pass
+        
+        success = await self.play_song(vc, ctx.guild.id, audio_url, song_info, ctx.channel)
+        
+        if success:
+            embed = self.create_now_playing_embed(song_info)
             await ctx.send(embed=embed)
-        except Exception as e:
-            await ctx.send(f"❌ Çalma hatası: {e}")
+        else:
+            await ctx.send("❌ Şarkı çalınamadı!")
 
     @commands.command(aliases=['duraklat', 'dur'])
     async def pause(self, ctx):
-        if ctx.voice_client and ctx.voice_client.is_playing():
-            ctx.voice_client.pause()
+        """Müziği duraklat"""
+        vc = ctx.voice_client
+        
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        
+        if vc.is_playing():
+            vc.pause()
             await ctx.send("⏸️ Müzik duraklatıldı!")
+        elif vc.is_paused():
+            await ctx.send("❌ Müzik zaten duraklatılmış!")
         else:
-            await ctx.send("❌ Müzik çalmıyor!")
+            await ctx.send("❌ Çalan müzik yok!")
 
     @commands.command(aliases=['resume', 'devam'])
     async def devam_et(self, ctx):
-        if ctx.voice_client and ctx.voice_client.is_paused():
-            ctx.voice_client.resume()
+        """Müziği devam ettir"""
+        vc = ctx.voice_client
+        
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        
+        if vc.is_paused():
+            vc.resume()
             await ctx.send("▶️ Müzik devam ediyor!")
         else:
             await ctx.send("❌ Duraklatılmış şarkı yok!")
 
     @commands.command(aliases=['atla', 's', 'next'])
     async def skip(self, ctx):
-        if ctx.voice_client and (ctx.voice_client.is_playing() or ctx.voice_client.is_paused()):
-            ctx.voice_client.stop()
+        """Şarkıyı atla"""
+        vc = ctx.voice_client
+        
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
             await ctx.send("⏭️ Şarkı atlandı!")
         else:
             await ctx.send("❌ Atlanacak şarkı yok!")
 
     @commands.command(aliases=['kapat', 'durdur'])
     async def stop(self, ctx):
-        if ctx.voice_client:
-            get_queue(ctx.guild.id).clear()
-            ctx.voice_client.stop()
-            await ctx.send("⏹️ Müzik durduruldu!")
-        else:
-            await ctx.send("❌ Müzik çalmıyor!")
+        """Müziği durdur ve kuyruğu temizle"""
+        vc = ctx.voice_client
+        
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        
+        get_queue(ctx.guild.id).clear()
+        clear_now_playing(ctx.guild.id)
+        
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+        
+        await ctx.send("⏹️ Müzik durduruldu ve kuyruk temizlendi!")
 
     @commands.command(aliases=['çık', 'dc', 'disconnect', 'ayrıl'])
     async def leave(self, ctx):
-        if ctx.voice_client:
-            get_queue(ctx.guild.id).clear()
-            await ctx.voice_client.disconnect()
-            await ctx.send("👋 Ses kanalından ayrıldım!")
-        else:
-            await ctx.send("❌ Zaten kanalda değilim!")
+        """Ses kanalından ayrıl"""
+        vc = ctx.voice_client
+        
+        if not vc:
+            await ctx.send("❌ Zaten ses kanalında değilim!")
+            return
+        
+        get_queue(ctx.guild.id).clear()
+        clear_now_playing(ctx.guild.id)
+        
+        await vc.disconnect()
+        await ctx.send("👋 Ses kanalından ayrıldım!")
 
     @commands.command(aliases=['q', 'kuyruk', 'sıra', 'liste'])
     async def queue(self, ctx):
-        q = get_queue(ctx.guild.id)
-        
-        if len(q) == 0:
-            await ctx.send("📋 Kuyruk boş!")
-            return
+        """Müzik kuyruğunu göster"""
+        queue = get_queue(ctx.guild.id)
+        current = get_now_playing(ctx.guild.id)
         
         embed = discord.Embed(title="📋 Müzik Kuyruğu", color=discord.Color.blue())
         
-        text = ""
-        for i, song in enumerate(q[:10]):
-            text += f"**{i+1}.** {song['title'][:50]}\n"
+        if current:
+            embed.add_field(name="🎵 Şu An Çalıyor", value=f"**{current}**", inline=False)
         
-        if len(q) > 10:
-            text += f"\n... ve {len(q) - 10} şarkı daha"
+        if len(queue) == 0:
+            embed.description = "Kuyrukta şarkı yok."
+        else:
+            text = ""
+            for i, song in enumerate(queue[:10]):
+                title = song['info']['title'][:45]
+                if len(song['info']['title']) > 45:
+                    title += "..."
+                text += f"**{i+1}.** {title}\n"
+            
+            if len(queue) > 10:
+                text += f"\n*... ve {len(queue) - 10} şarkı daha*"
+            
+            embed.add_field(name="📜 Sıradaki Şarkılar", value=text, inline=False)
         
-        embed.description = text
-        embed.set_footer(text=f"Toplam: {len(q)} şarkı")
+        embed.set_footer(text=f"Toplam: {len(queue)} şarkı kuyrukta")
         
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['katıl', 'gel', 'connect'])
     async def join(self, ctx):
+        """Ses kanalına katıl"""
         if not ctx.author.voice:
             await ctx.send("❌ Önce bir ses kanalına katıl!")
             return
@@ -408,26 +608,72 @@ class Muzik(commands.Cog):
         channel = ctx.author.voice.channel
         vc = ctx.voice_client
         
-        try:
-            if vc:
-                if vc.channel.id == channel.id:
-                    await ctx.send(f"✅ Zaten **{channel.name}** kanalındayım!")
-                    return
-                await vc.move_to(channel)
-                await ctx.send(f"🔊 **{channel.name}** kanalına taşındım!")
-            else:
-                await channel.connect()
-                await ctx.send(f"🔊 **{channel.name}** kanalına katıldım!")
-        except Exception as e:
-            await ctx.send(f"❌ Hata: {e}")
+        vc, error = await ensure_voice_connection(channel, vc)
+        
+        if error:
+            await ctx.send(f"❌ {error}")
+            return
+        
+        await ctx.send(f"🔊 **{channel.name}** kanalına katıldım!")
 
     @commands.command(aliases=['nowplaying', 'şuan'])
     async def np(self, ctx):
-        if not ctx.voice_client or not ctx.voice_client.is_playing():
+        """Şu an çalan şarkıyı göster"""
+        vc = ctx.voice_client
+        current = get_now_playing(ctx.guild.id)
+        
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        
+        if not current or (not vc.is_playing() and not vc.is_paused()):
             await ctx.send("❌ Şu an çalan şarkı yok!")
             return
         
-        await ctx.send("🎵 Şu an bir şarkı çalıyor!")
+        status = "⏸️ Duraklatıldı" if vc.is_paused() else "▶️ Çalıyor"
+        
+        embed = discord.Embed(title="🎵 Şu An Çalıyor", color=discord.Color.green())
+        embed.description = f"**{current}**"
+        embed.add_field(name="Durum", value=status)
+        
+        queue = get_queue(ctx.guild.id)
+        if len(queue) > 0:
+            embed.add_field(name="Sırada", value=f"{len(queue)} şarkı")
+        
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['karistir', 'karıştır'])
+    async def shuffle(self, ctx):
+        """Kuyruğu karıştır"""
+        queue = get_queue(ctx.guild.id)
+        
+        if len(queue) < 2:
+            await ctx.send("❌ Karıştırılacak yeterli şarkı yok!")
+            return
+        
+        random.shuffle(queue)
+        await ctx.send(f"🔀 Kuyruk karıştırıldı! ({len(queue)} şarkı)")
+
+    @commands.command(aliases=['qclear', 'kuyruktemizle', 'sıfırla'])
+    async def clearqueue(self, ctx):
+        """Müzik kuyruğunu temizle"""
+        queue = get_queue(ctx.guild.id)
+        count = len(queue)
+        queue.clear()
+        
+        await ctx.send(f"🗑️ Kuyruk temizlendi! ({count} şarkı silindi)")
+
+    # =====================================================
+    # 🔧 HATA YÖNETİMİ
+    # =====================================================
+
+    @play.error
+    async def play_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("❌ Kullanım: `!play <şarkı adı veya link>`")
+        else:
+            await ctx.send(f"❌ Bir hata oluştu: {error}")
+            print(f"[HATA] play komutu: {error}")
 
 # =====================================================
 # 🔧 COG YÜKLEME
