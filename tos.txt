@@ -1,0 +1,6 @@
+WOWSY - Kullanım Şartları
+
+1. Kabul: WOWSY botunu sunucunuza ekleyerek bu şartları kabul etmiş sayılırsınız.
+2. Yasaklar: Botun açıklarını aramak, bot üzerinden spam yapmak veya Discord Hizmet Koşulları'na aykırı faaliyetlerde bulunmak yasaktır.
+3. Sorumluluk: WOWSY "olduğu gibi" sunulur. Beklenmedik kesintiler veya teknik hatalardan dolayı oluşabilecek durumlardan geliştirici ekip sorumlu tutulamaz.
+4. Değişiklik: Bu şartlar önceden haber verilmeksizin güncellenebilir.
