@@ -5,6 +5,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.ui import Button, View
 import asyncio
 import random
 import yt_dlp
@@ -56,30 +57,51 @@ else:
     print("[UYARI] ⚠️ JavaScript runtime bulunamadı!")
 
 # =====================================================
-# 🎵 MÜZİK DEĞİŞKENLERİ
+# 🎵 MÜZİK DEĞİŞKENLERİ (SUNUCU BAZLI!)
 # =====================================================
 
-music_queues = {}
-now_playing = {}
+music_queues = {}      # {guild_id: [şarkılar]}
+now_playing = {}       # {guild_id: şarkı_adı}
+last_played = {}       # {guild_id: şarkı_verisi}
 
 
 def get_queue(guild_id):
+    """Sunucuya özel kuyruk al"""
+    guild_id = int(guild_id)  # ID'nin int olduğundan emin ol
     if guild_id not in music_queues:
         music_queues[guild_id] = []
     return music_queues[guild_id]
 
 
 def set_now_playing(guild_id, title):
+    """Şu an çalan şarkıyı ayarla"""
+    guild_id = int(guild_id)
     now_playing[guild_id] = title
 
 
 def get_now_playing(guild_id):
+    """Şu an çalan şarkıyı al"""
+    guild_id = int(guild_id)
     return now_playing.get(guild_id, None)
 
 
 def clear_now_playing(guild_id):
+    """Şu an çalan şarkıyı temizle"""
+    guild_id = int(guild_id)
     if guild_id in now_playing:
         del now_playing[guild_id]
+
+
+def set_last_played(guild_id, song_data):
+    """Son çalan şarkıyı kaydet"""
+    guild_id = int(guild_id)
+    last_played[guild_id] = song_data
+
+
+def get_last_played(guild_id):
+    """Son çalan şarkıyı al"""
+    guild_id = int(guild_id)
+    return last_played.get(guild_id, None)
 
 
 # =====================================================
@@ -212,6 +234,7 @@ def _try_search(query, use_android=False):
             title = info.get('title', 'Bilinmeyen Şarkı')
             duration = info.get('duration', 0)
             thumbnail = info.get('thumbnail')
+            webpage_url = info.get('webpage_url', query)
 
             if not thumbnail and info.get('thumbnails'):
                 thumbnail = info['thumbnails'][-1].get('url')
@@ -219,7 +242,9 @@ def _try_search(query, use_android=False):
             return audio_url, {
                 'title': title,
                 'duration': duration,
-                'thumbnail': thumbnail
+                'thumbnail': thumbnail,
+                'webpage_url': webpage_url,
+                'query': query
             }
 
     except Exception as e:
@@ -228,17 +253,21 @@ def _try_search(query, use_android=False):
 
 
 async def ensure_voice_connection(channel, existing_vc=None):
-    """Ses kanalına bağlan"""
+    """Ses kanalına bağlan - SUNUCU BAZLI"""
     try:
-        if existing_vc:
+        # Mevcut bağlantı varsa ve doğru kanaldaysa kullan
+        if existing_vc and existing_vc.is_connected():
             if existing_vc.channel.id == channel.id:
                 return existing_vc, None
+            # Farklı kanaldaysa taşı
             await existing_vc.move_to(channel)
             await asyncio.sleep(0.5)
             return existing_vc, None
 
-        vc = await channel.connect()
+        # Yeni bağlantı oluştur
+        vc = await channel.connect(timeout=20.0, reconnect=True)
 
+        # Bağlantı kontrolü
         for i in range(10):
             if vc.is_connected():
                 break
@@ -247,9 +276,11 @@ async def ensure_voice_connection(channel, existing_vc=None):
         if not vc.is_connected():
             return None, "Ses kanalına bağlanılamadı!"
 
+        print(f"[INFO] ✅ Ses kanalına bağlandı: {channel.guild.name} - {channel.name}")
         return vc, None
 
     except Exception as e:
+        print(f"[HATA] Ses kanalı bağlantı hatası ({channel.guild.name}): {e}")
         return None, str(e)
 
 
@@ -264,6 +295,91 @@ def format_duration(seconds):
 
 
 # =====================================================
+# 🔁 TEKRAR OYNAT BUTONU
+# =====================================================
+
+class ReplayButton(View):
+    def __init__(self, cog, guild_id, timeout=300):  # 5 dakika timeout
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Tekrar Oynat", style=discord.ButtonStyle.primary, emoji="🔁")
+    async def replay_button(self, interaction: discord.Interaction, button: Button):
+        # Kullanıcı ses kanalında mı?
+        if not interaction.user.voice:
+            await interaction.response.send_message("❌ Önce bir ses kanalına katıl!", ephemeral=True)
+            return
+
+        # Son çalan şarkı var mı?
+        last = get_last_played(interaction.guild.id)
+        if not last:
+            await interaction.response.send_message("❌ Tekrar oynatılacak şarkı bulunamadı!", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+
+        channel = interaction.user.voice.channel
+        vc = interaction.guild.voice_client
+
+        # Ses kanalına bağlan
+        vc, error = await ensure_voice_connection(channel, vc)
+
+        if error:
+            await interaction.followup.send(f"❌ {error}", ephemeral=True)
+            return
+
+        if not vc:
+            await interaction.followup.send("❌ Ses kanalına bağlanılamadı!", ephemeral=True)
+            return
+
+        song_info = last['info']
+        search_query = song_info.get('query') or song_info.get('webpage_url') or song_info['title']
+
+        # Yeni URL al
+        audio_url, new_info = await asyncio.to_thread(search_and_get_audio, search_query)
+
+        if not audio_url:
+            audio_url, new_info = await asyncio.to_thread(search_and_get_audio, song_info['title'])
+
+        if not audio_url:
+            await interaction.followup.send("❌ Şarkı tekrar bulunamadı!", ephemeral=True)
+            return
+
+        if new_info:
+            song_info = new_info
+
+        # Zaten çalıyorsa kuyruğun başına ekle
+        if vc.is_playing() or vc.is_paused():
+            queue = get_queue(interaction.guild.id)
+            queue.insert(0, {'url': audio_url, 'info': song_info})
+            await interaction.followup.send(f"🔁 **{song_info['title']}** sıradaki olarak eklendi!")
+            return
+
+        # Şarkıyı çal
+        success = await self.cog.play_song(vc, interaction.guild.id, audio_url, song_info, interaction.channel)
+
+        if success:
+            embed = discord.Embed(title="🔁 Tekrar Çalıyor", color=discord.Color.green())
+            embed.description = f"**{song_info['title']}**"
+            if song_info.get('duration'):
+                embed.add_field(name="⏱️ Süre", value=format_duration(song_info['duration']))
+            if song_info.get('thumbnail'):
+                embed.set_thumbnail(url=song_info['thumbnail'])
+            
+            # Yeni buton ekle
+            view = ReplayButton(self.cog, interaction.guild.id)
+            await interaction.followup.send(embed=embed, view=view)
+        else:
+            await interaction.followup.send("❌ Şarkı çalınamadı!", ephemeral=True)
+
+    async def on_timeout(self):
+        # Timeout olduğunda butonu devre dışı bırak
+        for item in self.children:
+            item.disabled = True
+
+
+# =====================================================
 # 🎵 MÜZİK COG
 # =====================================================
 
@@ -272,9 +388,18 @@ class Muzik(commands.Cog):
         self.bot = bot
 
     def create_play_next_callback(self, guild_id, vc, text_channel):
+        """Sonraki şarkıyı çalmak için callback - SUNUCU BAZLI"""
+        guild_id = int(guild_id)  # Guild ID'yi int yap
+        
         def play_next(error):
             if error:
-                print(f"[HATA] Oynatma hatası: {error}")
+                print(f"[HATA] Oynatma hatası (Guild: {guild_id}): {error}")
+
+            # VC bağlantı kontrolü - BU SUNUCUNUN VC'Sİ
+            if not vc or not vc.is_connected():
+                print(f"[INFO] VC bağlantısı kopmuş, guild: {guild_id}")
+                clear_now_playing(guild_id)
+                return
 
             queue = get_queue(guild_id)
 
@@ -295,6 +420,7 @@ class Muzik(commands.Cog):
                     source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
                     vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
                     set_now_playing(guild_id, song_info['title'])
+                    set_last_played(guild_id, {'url': audio_url, 'info': song_info})
 
                     embed = discord.Embed(
                         title="🎵 Şimdi Çalıyor",
@@ -306,31 +432,41 @@ class Muzik(commands.Cog):
                     if song_info.get('thumbnail'):
                         embed.set_thumbnail(url=song_info['thumbnail'])
 
+                    # Tekrar oynat butonu ekle
+                    view = ReplayButton(self, guild_id)
+
                     asyncio.run_coroutine_threadsafe(
-                        text_channel.send(embed=embed),
+                        text_channel.send(embed=embed, view=view),
                         self.bot.loop
                     )
                 except Exception as e:
-                    print(f"[HATA] Sonraki şarkı: {e}")
+                    print(f"[HATA] Sonraki şarkı (Guild: {guild_id}): {e}")
                     clear_now_playing(guild_id)
-                    if len(queue) > 0:
+                    # Kuyrukta başka şarkı varsa devam et
+                    if len(get_queue(guild_id)) > 0:
                         play_next(None)
             else:
                 clear_now_playing(guild_id)
+                print(f"[INFO] Kuyruk bitti, guild: {guild_id}")
 
         return play_next
 
     async def play_song(self, vc, guild_id, audio_url, song_info, text_channel):
+        """Şarkıyı çal - SUNUCU BAZLI"""
+        guild_id = int(guild_id)
         try:
             source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
             vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
             set_now_playing(guild_id, song_info['title'])
+            set_last_played(guild_id, {'url': audio_url, 'info': song_info})
+            print(f"[INFO] ▶️ Şarkı başladı (Guild: {guild_id}): {song_info['title']}")
             return True
         except Exception as e:
-            print(f"[HATA] Şarkı çalınamadı: {e}")
+            print(f"[HATA] Şarkı çalınamadı (Guild: {guild_id}): {e}")
             return False
 
     def create_embed(self, song_info, queue_position=None):
+        """Şarkı embed'i oluştur"""
         if queue_position:
             embed = discord.Embed(title="➕ Kuyruğa Eklendi", color=discord.Color.blue())
             embed.add_field(name="📋 Sıra", value=f"#{queue_position}", inline=True)
@@ -363,6 +499,9 @@ class Muzik(commands.Cog):
         await interaction.response.defer()
 
         channel = interaction.user.voice.channel
+        guild_id = interaction.guild.id
+        
+        # BU SUNUCUNUN voice client'ını al
         vc = interaction.guild.voice_client
 
         # Ses kanalına bağlan
@@ -390,18 +529,19 @@ class Muzik(commands.Cog):
 
         # Zaten çalıyorsa kuyruğa ekle
         if vc.is_playing() or vc.is_paused():
-            queue = get_queue(interaction.guild.id)
+            queue = get_queue(guild_id)
             queue.append({'url': audio_url, 'info': song_info})
             embed = self.create_embed(song_info, queue_position=len(queue))
             await interaction.edit_original_response(content=None, embed=embed)
             return
 
         # Şarkıyı çal
-        success = await self.play_song(vc, interaction.guild.id, audio_url, song_info, interaction.channel)
+        success = await self.play_song(vc, guild_id, audio_url, song_info, interaction.channel)
 
         if success:
             embed = self.create_embed(song_info)
-            await interaction.edit_original_response(content=None, embed=embed)
+            view = ReplayButton(self, guild_id)  # Tekrar oynat butonu
+            await interaction.edit_original_response(content=None, embed=embed, view=view)
         else:
             await interaction.edit_original_response(content="❌ Şarkı çalınamadı!")
 
@@ -431,8 +571,9 @@ class Muzik(commands.Cog):
             await interaction.response.send_message("❌ Zaten ses kanalında değilim!", ephemeral=True)
             return
 
-        get_queue(interaction.guild.id).clear()
-        clear_now_playing(interaction.guild.id)
+        guild_id = interaction.guild.id
+        get_queue(guild_id).clear()
+        clear_now_playing(guild_id)
         await vc.disconnect()
         await interaction.response.send_message("👋 Ses kanalından ayrıldım!")
 
@@ -480,16 +621,20 @@ class Muzik(commands.Cog):
         if not vc or not vc.is_connected():
             await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
             return
-        get_queue(interaction.guild.id).clear()
-        clear_now_playing(interaction.guild.id)
+        
+        guild_id = interaction.guild.id
+        get_queue(guild_id).clear()
+        clear_now_playing(guild_id)
+        
         if vc.is_playing() or vc.is_paused():
             vc.stop()
         await interaction.response.send_message("⏹️ Müzik durduruldu!")
 
     @app_commands.command(name="queue", description="Müzik kuyruğunu göster")
     async def slash_queue(self, interaction: discord.Interaction):
-        queue = get_queue(interaction.guild.id)
-        current = get_now_playing(interaction.guild.id)
+        guild_id = interaction.guild.id
+        queue = get_queue(guild_id)
+        current = get_now_playing(guild_id)
 
         embed = discord.Embed(title="📋 Müzik Kuyruğu", color=discord.Color.blue())
 
@@ -517,7 +662,8 @@ class Muzik(commands.Cog):
     @app_commands.command(name="np", description="Şu an çalan şarkıyı göster")
     async def slash_np(self, interaction: discord.Interaction):
         vc = interaction.guild.voice_client
-        current = get_now_playing(interaction.guild.id)
+        guild_id = interaction.guild.id
+        current = get_now_playing(guild_id)
 
         if not vc or not vc.is_connected():
             await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
@@ -531,11 +677,13 @@ class Muzik(commands.Cog):
         embed.description = f"**{current}**"
         embed.add_field(name="Durum", value=status)
 
-        queue = get_queue(interaction.guild.id)
+        queue = get_queue(guild_id)
         if len(queue) > 0:
             embed.add_field(name="Sırada", value=f"{len(queue)} şarkı")
 
-        await interaction.response.send_message(embed=embed)
+        # Tekrar oynat butonu
+        view = ReplayButton(self, guild_id)
+        await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command(name="shuffle", description="Kuyruğu karıştır")
     async def slash_shuffle(self, interaction: discord.Interaction):
@@ -566,6 +714,7 @@ class Muzik(commands.Cog):
         msg = await ctx.send(f"🔍 Aranıyor: **{query}**")
 
         channel = ctx.author.voice.channel
+        guild_id = ctx.guild.id
         vc = ctx.voice_client
 
         vc, error = await ensure_voice_connection(channel, vc)
@@ -581,7 +730,7 @@ class Muzik(commands.Cog):
             return
 
         if vc.is_playing() or vc.is_paused():
-            queue = get_queue(ctx.guild.id)
+            queue = get_queue(guild_id)
             queue.append({'url': audio_url, 'info': song_info})
             embed = self.create_embed(song_info, queue_position=len(queue))
             await msg.edit(content=None, embed=embed)
@@ -592,11 +741,76 @@ class Muzik(commands.Cog):
         except:
             pass
 
-        success = await self.play_song(vc, ctx.guild.id, audio_url, song_info, ctx.channel)
+        success = await self.play_song(vc, guild_id, audio_url, song_info, ctx.channel)
 
         if success:
             embed = self.create_embed(song_info)
-            await ctx.send(embed=embed)
+            view = ReplayButton(self, guild_id)  # Tekrar oynat butonu
+            await ctx.send(embed=embed, view=view)
+        else:
+            await ctx.send("❌ Şarkı çalınamadı!")
+
+    @commands.command(aliases=['tekrar', 'replay', 'yeniden', 'again'])
+    async def repeat(self, ctx):
+        """Son çalan şarkıyı tekrar oynat"""
+        if not ctx.author.voice:
+            await ctx.send("❌ Önce bir ses kanalına katıl!")
+            return
+
+        guild_id = ctx.guild.id
+        last = get_last_played(guild_id)
+        
+        if not last:
+            await ctx.send("❌ Daha önce çalınan şarkı yok!")
+            return
+
+        song_info = last['info']
+        search_query = song_info.get('query') or song_info.get('webpage_url') or song_info['title']
+
+        msg = await ctx.send(f"🔁 Tekrar oynatılıyor: **{song_info['title']}**")
+
+        channel = ctx.author.voice.channel
+        vc = ctx.voice_client
+
+        vc, error = await ensure_voice_connection(channel, vc)
+
+        if error:
+            await msg.edit(content=f"❌ {error}")
+            return
+
+        # Yeni URL al
+        audio_url, new_info = await asyncio.to_thread(search_and_get_audio, search_query)
+
+        if not audio_url:
+            audio_url, new_info = await asyncio.to_thread(search_and_get_audio, song_info['title'])
+
+        if not audio_url:
+            await msg.edit(content="❌ Şarkı tekrar bulunamadı!")
+            return
+
+        if new_info:
+            song_info = new_info
+
+        if vc.is_playing() or vc.is_paused():
+            queue = get_queue(guild_id)
+            queue.insert(0, {'url': audio_url, 'info': song_info})
+            await msg.edit(content=f"🔁 **{song_info['title']}** sıradaki olarak eklendi!")
+            return
+
+        try:
+            await msg.delete()
+        except:
+            pass
+
+        success = await self.play_song(vc, guild_id, audio_url, song_info, ctx.channel)
+
+        if success:
+            embed = discord.Embed(title="🔁 Tekrar Çalıyor", color=discord.Color.green())
+            embed.description = f"**{song_info['title']}**"
+            if song_info.get('thumbnail'):
+                embed.set_thumbnail(url=song_info['thumbnail'])
+            view = ReplayButton(self, guild_id)
+            await ctx.send(embed=embed, view=view)
         else:
             await ctx.send("❌ Şarkı çalınamadı!")
 
@@ -623,8 +837,9 @@ class Muzik(commands.Cog):
             await ctx.send("❌ Zaten ses kanalında değilim!")
             return
 
-        get_queue(ctx.guild.id).clear()
-        clear_now_playing(ctx.guild.id)
+        guild_id = ctx.guild.id
+        get_queue(guild_id).clear()
+        clear_now_playing(guild_id)
         await vc.disconnect()
         await ctx.send("👋 Ayrıldım!")
 
@@ -659,8 +874,9 @@ class Muzik(commands.Cog):
     async def stop(self, ctx):
         vc = ctx.voice_client
         if vc:
-            get_queue(ctx.guild.id).clear()
-            clear_now_playing(ctx.guild.id)
+            guild_id = ctx.guild.id
+            get_queue(guild_id).clear()
+            clear_now_playing(guild_id)
             if vc.is_playing() or vc.is_paused():
                 vc.stop()
             await ctx.send("⏹️ Durduruldu!")
@@ -669,8 +885,9 @@ class Muzik(commands.Cog):
 
     @commands.command(aliases=['q', 'kuyruk'])
     async def queue(self, ctx):
-        queue = get_queue(ctx.guild.id)
-        current = get_now_playing(ctx.guild.id)
+        guild_id = ctx.guild.id
+        queue = get_queue(guild_id)
+        current = get_now_playing(guild_id)
 
         embed = discord.Embed(title="📋 Kuyruk", color=discord.Color.blue())
 
@@ -687,9 +904,14 @@ class Muzik(commands.Cog):
 
     @commands.command(aliases=['np', 'şuan'])
     async def nowplaying(self, ctx):
-        current = get_now_playing(ctx.guild.id)
+        guild_id = ctx.guild.id
+        current = get_now_playing(guild_id)
+        
         if current:
-            await ctx.send(f"🎵 **{current}**")
+            embed = discord.Embed(title="🎵 Şu An Çalıyor", color=discord.Color.green())
+            embed.description = f"**{current}**"
+            view = ReplayButton(self, guild_id)
+            await ctx.send(embed=embed, view=view)
         else:
             await ctx.send("❌ Şu an çalan şarkı yok!")
 
