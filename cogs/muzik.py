@@ -8,6 +8,7 @@ from discord import app_commands
 import asyncio
 import random
 import yt_dlp
+import os
 
 from config import FFMPEG_OPTIONS
 
@@ -55,36 +56,74 @@ def clear_now_playing(guild_id):
 def get_ydl_opts():
     """yt-dlp ayarlarını oluştur (çerez desteği ile)"""
     opts = {
-        'format': 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+        # ✅ Format seçimi - daha esnek (YouTube bot korumasını aşmak için)
+        'format': 'ba[ext=webm]/ba[ext=m4a]/ba[ext=mp3]/ba/b[height<=480]/b',
+        
         'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
         'extract_flat': False,
         'default_search': 'ytsearch',
         'source_address': '0.0.0.0',
         'force_ipv4': True,
         'geo_bypass': True,
+        'geo_bypass_country': 'US',
+        
+        # ✅ Zaman aşımı ayarları
         'socket_timeout': 30,
         'retries': 10,
+        'fragment_retries': 10,
         'extractor_retries': 5,
-        # ✅ Bot korumasını aşmak için ek ayarlar
+        'skip_unavailable_fragments': True,
+        
+        # ✅ YouTube Premium kalitesini devre dışı bırak
+        'format_sort': [
+            'quality', 'res', 'fps', 'hdr:12', 
+            'codec:vp9.2', 'size', 'br', 'asr', 'proto'
+        ],
+        'ignore_no_formats_error': True,
+        'allow_unplayable_formats': False,
+        
+        # ✅ Bot korumasını aşmak için gelişmiş headers
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,tr;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
         },
+        
+        # ✅ Ekstra güvenlik ayarları
+        'nocheckcertificate': True,
+        'prefer_insecure': False,
+        'age_limit': None,
+        'extract_flat': False,
+        'youtube_include_dash_manifest': False,
+        'youtube_include_hls_manifest': False,
     }
 
-    # ✅ Tarayıcı çerezlerini kullan
-    if COOKIE_BROWSER:
+    # ✅ Çerez dosyası kontrolü
+    if COOKIE_FILE:
+        if os.path.exists(COOKIE_FILE):
+            opts['cookiefile'] = COOKIE_FILE
+            print(f"[INFO] ✅ Çerez dosyası yüklendi: {COOKIE_FILE}")
+        else:
+            print(f"[UYARI] ❌ Çerez dosyası bulunamadı: {COOKIE_FILE}")
+    
+    # ✅ Tarayıcı çerezleri (VDS'de çalışmaz genelde)
+    elif COOKIE_BROWSER:
         opts['cookiesfrombrowser'] = (COOKIE_BROWSER,)
-        print(f"[INFO] YouTube çerezleri: {COOKIE_BROWSER} tarayıcısından alınacak")
-
-    # ✅ VEYA cookies.txt dosyasını kullan
-    elif COOKIE_FILE:
-        opts['cookiefile'] = COOKIE_FILE
-        print(f"[INFO] YouTube çerezleri: {COOKIE_FILE} dosyasından alınacak")
+        print(f"[INFO] ✅ Tarayıcı çerezleri kullanılıyor: {COOKIE_BROWSER}")
 
     return opts
 
@@ -98,37 +137,124 @@ def search_and_get_audio(query):
             if not query.startswith(('http://', 'https://')):
                 query = f"ytsearch:{query}"
 
+            print(f"[INFO] 🔍 Aranıyor: {query}")
             info = ydl.extract_info(query, download=False)
 
             if 'entries' in info:
                 if len(info['entries']) == 0:
+                    print("[HATA] ❌ Sonuç bulunamadı")
                     return None, None
                 info = info['entries'][0]
 
+            # ✅ Gelişmiş format seçimi
             audio_url = None
-            if 'url' in info:
+            selected_format = None
+            
+            # 1. Yöntem: Doğrudan URL varsa kullan
+            if info.get('url'):
                 audio_url = info['url']
+                print(f"[INFO] ✅ Direkt URL bulundu")
+            
+            # 2. Yöntem: Formatlardan en iyisini seç
             elif 'formats' in info:
-                for f in info['formats']:
-                    if f.get('acodec') != 'none':
-                        audio_url = f['url']
+                formats = info['formats']
+                
+                # ✅ Öncelik sırası ile format ara
+                # Önce sadece audio formatları
+                audio_formats = [
+                    f for f in formats 
+                    if f.get('vcodec') == 'none' and f.get('acodec') != 'none' and f.get('url')
+                ]
+                
+                if audio_formats:
+                    # Bitrate'e göre sırala (en yüksek kalite)
+                    best_audio = max(
+                        audio_formats, 
+                        key=lambda x: (x.get('abr') or 0, x.get('tbr') or 0)
+                    )
+                    audio_url = best_audio['url']
+                    selected_format = best_audio.get('format_id', 'unknown')
+                    print(f"[INFO] ✅ Audio format bulundu: {selected_format} (abr: {best_audio.get('abr')})")
+                
+                else:
+                    # ✅ Audio bulunamazsa, video+audio formatı dene
+                    combined_formats = [
+                        f for f in formats 
+                        if f.get('acodec') != 'none' and f.get('url')
+                    ]
+                    
+                    if combined_formats:
+                        # En düşük video kalitesini seç (daha az bant genişliği)
+                        best_combined = min(
+                            combined_formats, 
+                            key=lambda x: (x.get('height') or 9999)
+                        )
+                        audio_url = best_combined['url']
+                        selected_format = best_combined.get('format_id', 'unknown')
+                        print(f"[INFO] ⚠️ Kombine format kullanılıyor: {selected_format}")
+                    
+                    else:
+                        # ✅ Son çare: herhangi bir format
+                        for f in formats:
+                            if f.get('url'):
+                                audio_url = f['url']
+                                selected_format = f.get('format_id', 'unknown')
+                                print(f"[INFO] ⚠️ Yedek format kullanılıyor: {selected_format}")
+                                break
+
+            # ✅ requested_formats kontrolü (bazı videolar için)
+            if not audio_url and 'requested_formats' in info:
+                for rf in info['requested_formats']:
+                    if rf.get('acodec') != 'none' and rf.get('url'):
+                        audio_url = rf['url']
+                        print(f"[INFO] ✅ Requested format bulundu")
                         break
 
             if not audio_url:
+                print("[HATA] ❌ Oynatılabilir URL bulunamadı")
+                # Debug: Mevcut formatları listele
+                if 'formats' in info:
+                    print(f"[DEBUG] Mevcut format sayısı: {len(info['formats'])}")
+                    for f in info['formats'][:5]:
+                        print(f"  - {f.get('format_id')}: vcodec={f.get('vcodec')}, acodec={f.get('acodec')}")
                 return None, None
 
             title = info.get('title', 'Bilinmeyen Şarkı')
             duration = info.get('duration', 0)
             thumbnail = info.get('thumbnail', None)
+            
+            # ✅ Thumbnail yoksa alternatif dene
+            if not thumbnail and info.get('thumbnails'):
+                thumbnail = info['thumbnails'][-1].get('url')
 
+            print(f"[INFO] ✅ Başarılı: {title[:50]}...")
+            
             return audio_url, {
                 'title': title,
                 'duration': duration,
                 'thumbnail': thumbnail
             }
 
+    except yt_dlp.utils.DownloadError as e:
+        error_msg = str(e)
+        print(f"[HATA] ❌ YouTube Download Error: {error_msg}")
+        
+        # ✅ Spesifik hata mesajları
+        if "Sign in to confirm" in error_msg:
+            print("[ÇÖZÜM] 🔧 YouTube giriş istiyor - cookies.txt dosyasını güncelleyin!")
+        elif "Requested format is not available" in error_msg:
+            print("[ÇÖZÜM] 🔧 Format mevcut değil - yt-dlp'yi güncelleyin: pip install -U yt-dlp")
+        elif "Video unavailable" in error_msg:
+            print("[ÇÖZÜM] 🔧 Video mevcut değil veya bölgenizde engellenmiş")
+        elif "Private video" in error_msg:
+            print("[ÇÖZÜM] 🔧 Video özel")
+            
+        return None, None
+        
     except Exception as e:
-        print(f"[HATA] search_and_get_audio: {e}")
+        print(f"[HATA] ❌ search_and_get_audio: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None
 
 
@@ -185,9 +311,22 @@ class Muzik(commands.Cog):
 
             if len(queue) > 0 and vc.is_connected():
                 next_song = queue.pop(0)
+                
+                # ✅ URL'nin hala geçerli olup olmadığını kontrol et
+                # YouTube URL'leri kısa sürede expire olabilir
                 try:
+                    # Yeni URL al (daha güvenilir)
+                    new_url, new_info = search_and_get_audio(next_song['info']['title'])
+                    
+                    if new_url:
+                        audio_url = new_url
+                        song_info = new_info
+                    else:
+                        audio_url = next_song['url']
+                        song_info = next_song['info']
+                    
                     source = discord.FFmpegPCMAudio(
-                        next_song['url'], **FFMPEG_OPTIONS
+                        audio_url, **FFMPEG_OPTIONS
                     )
                     vc.play(
                         source,
@@ -196,24 +335,20 @@ class Muzik(commands.Cog):
                         )
                     )
 
-                    set_now_playing(guild_id, next_song['info']['title'])
+                    set_now_playing(guild_id, song_info['title'])
 
                     embed = discord.Embed(
                         title="🎵 Şimdi Çalıyor",
-                        description=f"**{next_song['info']['title']}**",
+                        description=f"**{song_info['title']}**",
                         color=discord.Color.green()
                     )
-                    if next_song['info'].get('duration'):
+                    if song_info.get('duration'):
                         embed.add_field(
                             name="⏱️ Süre",
-                            value=format_duration(
-                                next_song['info']['duration']
-                            )
+                            value=format_duration(song_info['duration'])
                         )
-                    if next_song['info'].get('thumbnail'):
-                        embed.set_thumbnail(
-                            url=next_song['info']['thumbnail']
-                        )
+                    if song_info.get('thumbnail'):
+                        embed.set_thumbnail(url=song_info['thumbnail'])
 
                     asyncio.run_coroutine_threadsafe(
                         text_channel.send(embed=embed),
@@ -222,6 +357,14 @@ class Muzik(commands.Cog):
                 except Exception as e:
                     print(f"[HATA] Sonraki şarkı çalınamadı: {e}")
                     clear_now_playing(guild_id)
+                    
+                    # ✅ Hata durumunda sıradaki şarkıya geç
+                    if len(queue) > 0:
+                        asyncio.run_coroutine_threadsafe(
+                            text_channel.send("⚠️ Şarkı çalınamadı, sıradaki deneniyor..."),
+                            self.bot.loop
+                        )
+                        play_next(None)
             else:
                 clear_now_playing(guild_id)
 
@@ -312,7 +455,12 @@ class Muzik(commands.Cog):
 
         if not audio_url:
             await searching_msg.edit(
-                content="❌ Şarkı bulunamadı! YouTube bot koruması aktif olabilir."
+                content="❌ Şarkı bulunamadı!\n"
+                "**Olası sebepler:**\n"
+                "• YouTube bot koruması aktif\n"
+                "• Çerez dosyası geçersiz/eksik\n"
+                "• Video bölgenizde engellenmiş\n"
+                "• yt-dlp güncel değil (`pip install -U yt-dlp`)"
             )
             return
 
@@ -533,6 +681,66 @@ class Muzik(commands.Cog):
         )
 
     # =====================================================
+    # 🔧 TEST KOMUTU (Debug için)
+    # =====================================================
+
+    @app_commands.command(name="yttest", description="YouTube bağlantısını test et")
+    async def slash_yttest(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        test_results = []
+        
+        # 1. Çerez dosyası kontrolü
+        if COOKIE_FILE:
+            if os.path.exists(COOKIE_FILE):
+                file_size = os.path.getsize(COOKIE_FILE)
+                test_results.append(f"✅ Çerez dosyası mevcut ({file_size} bytes)")
+            else:
+                test_results.append(f"❌ Çerez dosyası bulunamadı: {COOKIE_FILE}")
+        else:
+            test_results.append("⚠️ COOKIE_FILE tanımlanmamış")
+        
+        # 2. yt-dlp versiyonu
+        try:
+            test_results.append(f"✅ yt-dlp versiyonu: {yt_dlp.version.__version__}")
+        except:
+            test_results.append("⚠️ yt-dlp versiyonu alınamadı")
+        
+        # 3. Test videosu
+        test_results.append("\n🔍 Test videosu deneniyor...")
+        
+        try:
+            audio_url, song_info = await asyncio.to_thread(
+                search_and_get_audio, "Rick Astley Never Gonna Give You Up"
+            )
+            
+            if audio_url:
+                test_results.append(f"✅ Video bulundu: {song_info['title'][:40]}...")
+                test_results.append(f"✅ URL uzunluğu: {len(audio_url)} karakter")
+            else:
+                test_results.append("❌ Video bulunamadı - YouTube bot koruması aktif olabilir")
+        except Exception as e:
+            test_results.append(f"❌ Hata: {str(e)[:100]}")
+        
+        embed = discord.Embed(
+            title="🔧 YouTube Bağlantı Testi",
+            description="\n".join(test_results),
+            color=discord.Color.orange()
+        )
+        
+        embed.add_field(
+            name="💡 Çözüm Önerileri",
+            value=(
+                "1. `pip install -U yt-dlp` ile güncelleyin\n"
+                "2. cookies.txt dosyasını yeniden oluşturun\n"
+                "3. VPN/Proxy kullanmayı deneyin"
+            ),
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed)
+
+    # =====================================================
     # 🎵 PREFIX KOMUTLARI
     # =====================================================
 
@@ -563,7 +771,11 @@ class Muzik(commands.Cog):
 
         if not audio_url:
             await msg.edit(
-                content="❌ Şarkı bulunamadı! YouTube bot koruması aktif olabilir."
+                content="❌ Şarkı bulunamadı!\n"
+                "**Olası sebepler:**\n"
+                "• YouTube bot koruması aktif\n"
+                "• Çerez dosyası geçersiz/eksik\n"
+                "• Video bölgenizde engellenmiş"
             )
             return
 
@@ -731,6 +943,57 @@ class Muzik(commands.Cog):
         count = len(queue)
         queue.clear()
         await ctx.send(f"🗑️ Kuyruk temizlendi! ({count} şarkı silindi)")
+
+    # =====================================================
+    # 🔧 PREFIX TEST KOMUTU
+    # =====================================================
+
+    @commands.command(aliases=['test', 'yttest'])
+    async def youtube_test(self, ctx):
+        """YouTube bağlantısını test et"""
+        msg = await ctx.send("🔧 YouTube bağlantısı test ediliyor...")
+        
+        test_results = []
+        
+        # 1. Çerez dosyası kontrolü
+        if COOKIE_FILE:
+            if os.path.exists(COOKIE_FILE):
+                file_size = os.path.getsize(COOKIE_FILE)
+                test_results.append(f"✅ Çerez dosyası mevcut ({file_size} bytes)")
+            else:
+                test_results.append(f"❌ Çerez dosyası bulunamadı: {COOKIE_FILE}")
+        else:
+            test_results.append("⚠️ COOKIE_FILE tanımlanmamış")
+        
+        # 2. yt-dlp versiyonu
+        try:
+            test_results.append(f"✅ yt-dlp: {yt_dlp.version.__version__}")
+        except:
+            test_results.append("⚠️ yt-dlp versiyonu alınamadı")
+        
+        # 3. Test videosu
+        test_results.append("\n🔍 Test videosu deneniyor...")
+        
+        try:
+            audio_url, song_info = await asyncio.to_thread(
+                search_and_get_audio, "test video"
+            )
+            
+            if audio_url:
+                test_results.append(f"✅ Video bulundu!")
+                test_results.append(f"✅ Başlık: {song_info['title'][:40]}...")
+            else:
+                test_results.append("❌ Video bulunamadı")
+        except Exception as e:
+            test_results.append(f"❌ Hata: {str(e)[:100]}")
+        
+        embed = discord.Embed(
+            title="🔧 YouTube Bağlantı Testi",
+            description="\n".join(test_results),
+            color=discord.Color.orange()
+        )
+        
+        await msg.edit(content=None, embed=embed)
 
     @play.error
     async def play_error(self, ctx, error):
