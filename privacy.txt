@@ -1,0 +1,6 @@
+WOWSY - Gizlilik Politikası
+
+1. Toplanan Veriler: WOWSY, temel işlevlerini yerine getirebilmek için kullanıcıların Discord ID'lerini, sunucu ID'lerini ve komut kullanım verilerini işler. Mesaj içerikleri veya özel konuşmalar kesinlikle kaydedilmez.
+2. Veri Kullanımı: Toplanan veriler sadece botun özelliklerini (seviye sistemi, ekonomi veya kayıt gibi) sunmak amacıyla kullanılır.
+3. Veri Güvenliği: Verileriniz güvenli sunucularda saklanır ve üçüncü şahıslarla asla paylaşılmaz.
+4. Veri Silme: Verilerinizin silinmesini istiyorsanız, WOWSY'yi sunucunuzdan çıkarabilir veya geliştirici ekibimizle Discord üzerinden iletişime geçebilirsiniz.
