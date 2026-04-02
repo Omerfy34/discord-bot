@@ -15,7 +15,7 @@ from utils import guvenli_cevap
 # =====================================================
 # Yıl başında veya tarihler açıklandığında güncelle, başka yere dokunma!
 
-YIL = 2025  # Mevcut yıl
+YIL = 2026  # Mevcut yıl
 
 # YKS Tarihleri (ÖSYM açıkladığında güncelle)
 # Format: (Ay, Gün, Saat, Dakika)
