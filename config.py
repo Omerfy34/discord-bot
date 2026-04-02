@@ -34,23 +34,14 @@ FFMPEG_OPTIONS = {
 # =====================================================
 # 🍪 YOUTUBE ÇEREZ AYARLARI (Bot korumasını aşmak için)
 # =====================================================
-# Yöntem 1: Tarayıcıdan otomatik çerez al
-#   Seçenekler: "chrome", "firefox", "edge", "opera", "brave"
-#   Sunucuda o tarayıcı kurulu ve YouTube'a giriş yapılmış olmalı
-#   Kullanmıyorsan None yap
+
+# Yöntem 1: Tarayıcıdan otomatik çerez al (Sunucuda tarayıcı yoksa None)
 COOKIE_BROWSER = None
 
-# Yöntem 2: cookies.txt dosyasından çerez al
-#   Bilgisayarında tarayıcıya "Get cookies.txt LOCALLY" eklentisi kur
-#   YouTube.com'a giriş yap, çerezleri export et
-#   cookies.txt dosyasını bot klasörüne koy
-#   Kullanmıyorsan None yap
-COOKIE_FILE = None
+# Yöntem 2: cookies.txt dosyasından çerez al (AKTİF)
+COOKIE_FILE = "cookies.txt"
 
-# Yöntem 3: OAuth2 ile giriş (EN GÜVENİLİR)
-#   Terminalde: yt-dlp --username oauth2 --password "" --cache-dir .cache "ytsearch:test"
-#   Sana link verecek, tarayıcıda aç ve onayla
-#   True yap aktifleştirmek için
+# Yöntem 3: OAuth2 (Artık desteklenmiyor)
 YOUTUBE_OAUTH2 = False
 
 # =====================================================
@@ -100,9 +91,7 @@ groq_client = None
 if GROQ_API_KEY:
     try:
         from groq import Groq
-        groq_client = Groq(
-            api_key=GROQ_API_KEY
-        )
+        groq_client = Groq(api_key=GROQ_API_KEY)
         print("✅ Groq AI aktif!")
     except Exception as e:
         print(f"⚠️ Groq AI başlatılamadı: {e}")
@@ -120,9 +109,12 @@ def durum_ozeti():
     if COOKIE_BROWSER:
         yt_durum = f"✅ Tarayıcı ({COOKIE_BROWSER})"
     elif COOKIE_FILE:
-        yt_durum = f"✅ Dosya ({COOKIE_FILE})"
+        if os.path.exists(COOKIE_FILE):
+            yt_durum = f"✅ Dosya ({COOKIE_FILE})"
+        else:
+            yt_durum = f"❌ Dosya bulunamadı ({COOKIE_FILE})"
     elif YOUTUBE_OAUTH2:
-        yt_durum = "✅ OAuth2"
+        yt_durum = "⚠️ OAuth2 (desteklenmiyor)"
     else:
         yt_durum = "⚠️ Çerez yok (engellenebilir)"
 
