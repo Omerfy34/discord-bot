@@ -27,9 +27,31 @@ PATRON_ID = 692517100144558090  # Senin Discord ID'n
 # =====================================================
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn -filter:a "volume=0.5"'
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin',
+    'options': '-vn -bufsize 64k'
 }
+
+# =====================================================
+# 🍪 YOUTUBE ÇEREZ AYARLARI (Bot korumasını aşmak için)
+# =====================================================
+# Yöntem 1: Tarayıcıdan otomatik çerez al
+#   Seçenekler: "chrome", "firefox", "edge", "opera", "brave"
+#   Sunucuda o tarayıcı kurulu ve YouTube'a giriş yapılmış olmalı
+#   Kullanmıyorsan None yap
+COOKIE_BROWSER = None
+
+# Yöntem 2: cookies.txt dosyasından çerez al
+#   Bilgisayarında tarayıcıya "Get cookies.txt LOCALLY" eklentisi kur
+#   YouTube.com'a giriş yap, çerezleri export et
+#   cookies.txt dosyasını bot klasörüne koy
+#   Kullanmıyorsan None yap
+COOKIE_FILE = None
+
+# Yöntem 3: OAuth2 ile giriş (EN GÜVENİLİR)
+#   Terminalde: yt-dlp --username oauth2 --password "" --cache-dir .cache "ytsearch:test"
+#   Sana link verecek, tarayıcıda aç ve onayla
+#   True yap aktifleştirmek için
+YOUTUBE_OAUTH2 = False
 
 # =====================================================
 # 🔥 FIREBASE BAĞLANTISI
@@ -94,12 +116,23 @@ else:
 
 def durum_ozeti():
     """Bot başlarken durum özeti yazdır"""
+    # YouTube çerez durumu
+    if COOKIE_BROWSER:
+        yt_durum = f"✅ Tarayıcı ({COOKIE_BROWSER})"
+    elif COOKIE_FILE:
+        yt_durum = f"✅ Dosya ({COOKIE_FILE})"
+    elif YOUTUBE_OAUTH2:
+        yt_durum = "✅ OAuth2"
+    else:
+        yt_durum = "⚠️ Çerez yok (engellenebilir)"
+
     print("")
     print("=" * 50)
     print("📊 YAPILANDIRMA DURUMU:")
     print(f"   ├ Discord Token: {'✅ Var' if DISCORD_TOKEN else '❌ Yok'}")
     print(f"   ├ Firebase:      {'✅ Bağlı' if db else '❌ Bağlı Değil'}")
     print(f"   ├ Groq AI:       {'✅ Aktif' if groq_client else '⚪ Pasif'}")
+    print(f"   ├ YouTube Çerez: {yt_durum}")
     print(f"   └ Patron ID:     {PATRON_ID}")
     print("=" * 50)
     print("")
