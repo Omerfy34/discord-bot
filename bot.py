@@ -1,860 +1,859 @@
 # =====================================================
-# 🚀 WOWSY BOT - ANA DOSYA (GÜNCELLENMİŞ)
+# 🎵 WOWSY BOT - MÜZİK KOMUTLARI (EJS FİX)
 # =====================================================
 
-print("🚀 WOWSY BOT BAŞLATILIYOR...")
-print("")
-
-import os
-import sys
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime
 import asyncio
+import random
+import yt_dlp
+import os
+import subprocess
+
+from config import FFMPEG_OPTIONS
 
 # =====================================================
-# ⚙️ CONFIG YÜKLEME VE KONTROL
+# 🍪 ÇEREZ AYARLARINI YÜKLE
 # =====================================================
 
 try:
-    from config import (
-        DISCORD_TOKEN, 
-        db, 
-        groq_client, 
-        durum_ozeti, 
-        baslangic_kontrolu,
-        check_youtube_cookies,
-        COOKIE_FILE,
-        FFMPEG_OPTIONS
-    )
-except ImportError as e:
-    print(f"❌ Config yüklenemedi: {e}")
-    print("   config.py dosyasını kontrol edin!")
-    sys.exit(1)
+    from config import COOKIE_BROWSER
+except ImportError:
+    COOKIE_BROWSER = None
+
+try:
+    from config import COOKIE_FILE
+except ImportError:
+    COOKIE_FILE = None
 
 # =====================================================
-# 🔍 BAŞLANGIÇ KONTROLLERİ
+# 🔧 DENO/NODE KONTROLÜ
 # =====================================================
 
-print("🔍 Başlangıç kontrolleri yapılıyor...")
-print("")
-
-# Kritik kontroller
-if not baslangic_kontrolu():
-    print("")
-    print("⛔ Kritik hatalar var! Bot başlatılamıyor.")
-    print("   Yukarıdaki hataları düzeltin ve tekrar deneyin.")
-    sys.exit(1)
-
-# Durum özeti
-durum_ozeti()
-
-# =====================================================
-# ⚙️ BOT AYARLARI
-# =====================================================
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.voice_states = True  # Ses kanalı olayları için
-
-bot = commands.Bot(
-    command_prefix="!", 
-    intents=intents, 
-    help_command=None,
-    case_insensitive=True  # Büyük/küçük harf duyarsız
-)
-
-# =====================================================
-# 🔥 GÜÇLÜ WARM-UP SİSTEMİ (GELİŞMİŞ)
-# =====================================================
-
-async def warmup_systems():
-    """Bot başladığında TÜM sistemleri ısıt"""
-    print("\n🔥 WARM-UP BAŞLIYOR...")
-    print("=" * 50)
-    
-    warmup_results = {
-        'groq': False,
-        'firebase': False,
-        'discord': False,
-        'youtube': False,
-        'ffmpeg': False
-    }
-    
-    # 1. Groq AI'yı ısıt (3 kez)
-    if groq_client:
-        print("\n🤖 [1/5] Groq AI ısıtılıyor...")
-        success_count = 0
-        for i in range(3):
-            try:
-                await asyncio.to_thread(
-                    groq_client.chat.completions.create,
-                    model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": f"warmup test {i}"}],
-                    max_tokens=5
-                )
-                success_count += 1
-                print(f"       ✅ Groq warm-up {i+1}/3 başarılı")
-            except Exception as e:
-                print(f"       ⚠️ Groq warm-up {i+1}/3 hatası: {str(e)[:50]}")
-            await asyncio.sleep(0.5)
-        
-        warmup_results['groq'] = success_count >= 2
-        if warmup_results['groq']:
-            print(f"       ✅ Groq AI hazır! ({success_count}/3 başarılı)")
-        else:
-            print(f"       ⚠️ Groq AI sorunlu ({success_count}/3 başarılı)")
-    else:
-        print("\n⚪ [1/5] Groq AI atlandı (yapılandırılmamış)")
-    
-    # 2. Firebase'i ısıt (3 kez)
-    if db:
-        print("\n🔥 [2/5] Firebase ısıtılıyor...")
-        success_count = 0
-        for i in range(3):
-            try:
-                await asyncio.to_thread(
-                    db.collection('_warmup').limit(1).get
-                )
-                success_count += 1
-                print(f"       ✅ Firebase warm-up {i+1}/3 başarılı")
-            except Exception as e:
-                print(f"       ⚠️ Firebase warm-up {i+1}/3 hatası: {str(e)[:50]}")
-            await asyncio.sleep(0.3)
-        
-        warmup_results['firebase'] = success_count >= 2
-        if warmup_results['firebase']:
-            print(f"       ✅ Firebase hazır! ({success_count}/3 başarılı)")
-        else:
-            print(f"       ⚠️ Firebase sorunlu ({success_count}/3 başarılı)")
-    else:
-        print("\n⚪ [2/5] Firebase atlandı (yapılandırılmamış)")
-    
-    # 3. Discord API'yi ısıt
-    print("\n💬 [3/5] Discord API ısıtılıyor...")
+def check_js_runtime():
+    """JavaScript runtime kontrolü"""
+    # Deno kontrol
     try:
-        app_info = await bot.application_info()
-        warmup_results['discord'] = True
-        print(f"       ✅ Discord API hazır!")
-        print(f"       ℹ️ Bot sahibi: {app_info.owner}")
-    except Exception as e:
-        print(f"       ⚠️ Discord API hatası: {e}")
+        result = subprocess.run(['deno', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            return 'deno', result.stdout.split('\n')[0]
+    except:
+        pass
     
-    # 4. yt-dlp ve YouTube'u ısıt
-    print("\n🎵 [4/5] YouTube sistemi ısıtılıyor...")
+    # Node kontrol
     try:
-        import yt_dlp
-        
-        # yt-dlp versiyonunu göster
-        print(f"       ℹ️ yt-dlp versiyonu: {yt_dlp.version.__version__}")
-        
-        # Çerez durumunu kontrol et
-        cookie_ok, cookie_msg = check_youtube_cookies()
-        if cookie_ok:
-            print(f"       ✅ Çerez dosyası: {cookie_msg}")
-        else:
-            print(f"       ⚠️ Çerez sorunu: {cookie_msg}")
-        
-        # yt-dlp'yi başlat
-        ydl_opts = {
-            'quiet': True, 
+        result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            return 'node', result.stdout.strip()
+    except:
+        pass
+    
+    return None, None
+
+JS_RUNTIME, JS_VERSION = check_js_runtime()
+if JS_RUNTIME:
+    print(f"[INFO] ✅ JavaScript runtime: {JS_RUNTIME} {JS_VERSION}")
+else:
+    print("[UYARI] ⚠️ JavaScript runtime bulunamadı! YouTube çalışmayabilir.")
+    print("[UYARI] 💡 Çözüm: curl -fsSL https://deno.land/install.sh | sh")
+
+# =====================================================
+# 🎵 MÜZİK FONKSİYONLARI
+# =====================================================
+
+music_queues = {}
+now_playing = {}
+
+
+def get_queue(guild_id):
+    if guild_id not in music_queues:
+        music_queues[guild_id] = []
+    return music_queues[guild_id]
+
+
+def set_now_playing(guild_id, title):
+    now_playing[guild_id] = title
+
+
+def get_now_playing(guild_id):
+    return now_playing.get(guild_id, None)
+
+
+def clear_now_playing(guild_id):
+    if guild_id in now_playing:
+        del now_playing[guild_id]
+
+
+def get_ydl_opts(use_android=False):
+    """yt-dlp ayarlarını oluştur"""
+    
+    if use_android:
+        # ✅ Android client - JavaScript bypass
+        opts = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+            'quiet': True,
             'no_warnings': True,
-            'extract_flat': True,
+            'extract_flat': False,
+            'default_search': 'ytsearch',
+            
+            # ✅ Android client kullan
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android_music', 'android'],
+                }
+            },
+            
+            'http_headers': {
+                'User-Agent': 'com.google.android.youtube/19.02.39 (Linux; U; Android 14) gzip',
+            },
+            
+            'socket_timeout': 30,
+            'retries': 5,
+            'geo_bypass': True,
+            'geo_bypass_country': 'US',
+        }
+    else:
+        # ✅ Normal ayarlar (EJS ile)
+        opts = {
+            'format': 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+            'noplaylist': True,
+            'quiet': False,
+            'no_warnings': False,
+            'extract_flat': False,
+            'default_search': 'ytsearch',
+            'source_address': '0.0.0.0',
+            'force_ipv4': True,
+            'geo_bypass': True,
+            'geo_bypass_country': 'US',
+            
+            'socket_timeout': 30,
+            'retries': 10,
+            'fragment_retries': 10,
+            'extractor_retries': 5,
+            'skip_unavailable_fragments': True,
+            
+            # ✅ EJS - Remote components
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                }
+            },
+            
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            
+            'youtube_include_dash_manifest': True,
+            'youtube_include_hls_manifest': True,
         }
         
-        # Çerez dosyası varsa ekle
-        if COOKIE_FILE and os.path.exists(COOKIE_FILE):
-            ydl_opts['cookiefile'] = COOKIE_FILE
-        
+        # ✅ JavaScript runtime varsa remote components aktif et
+        if JS_RUNTIME == 'deno':
+            opts['allow_remote_components'] = ['ejs:github']
+
+    # ✅ Çerez ekle
+    if COOKIE_FILE and os.path.exists(COOKIE_FILE):
+        opts['cookiefile'] = COOKIE_FILE
+        print(f"[INFO] ✅ Çerez yüklendi: {COOKIE_FILE}")
+
+    return opts
+
+
+def search_and_get_audio(query):
+    """Şarkı ara ve audio URL + başlık döndür"""
+    
+    # İlk deneme: Normal ayarlar
+    audio_url, song_info = _try_search(query, use_android=False)
+    
+    if audio_url:
+        return audio_url, song_info
+    
+    # İkinci deneme: Android client
+    print("[INFO] 🔄 Android client deneniyor...")
+    audio_url, song_info = _try_search(query, use_android=True)
+    
+    return audio_url, song_info
+
+
+def _try_search(query, use_android=False):
+    """Arama denemesi"""
+    try:
+        ydl_opts = get_ydl_opts(use_android=use_android)
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Basit bir test - YouTube ana sayfasını kontrol et
-            pass
-        
-        warmup_results['youtube'] = True
-        print("       ✅ yt-dlp hazır!")
-        
-    except ImportError:
-        print("       ❌ yt-dlp yüklü değil!")
-        print("       💡 Çözüm: pip install yt-dlp")
-    except Exception as e:
-        print(f"       ⚠️ YouTube hatası: {e}")
-    
-    # 5. FFmpeg kontrolü
-    print("\n🔊 [5/5] FFmpeg kontrol ediliyor...")
-    try:
-        # FFmpeg versiyonunu kontrol et
-        result = await asyncio.to_thread(
-            os.popen, 'ffmpeg -version 2>&1 | head -n 1'
-        )
-        ffmpeg_version = result.read().strip()
-        
-        if 'ffmpeg version' in ffmpeg_version.lower():
-            warmup_results['ffmpeg'] = True
-            print(f"       ✅ {ffmpeg_version[:50]}")
-        else:
-            # Alternatif kontrol
-            exit_code = os.system('ffmpeg -version > /dev/null 2>&1')
-            if exit_code == 0:
-                warmup_results['ffmpeg'] = True
-                print("       ✅ FFmpeg mevcut")
-            else:
-                print("       ❌ FFmpeg bulunamadı!")
-                print("       💡 Çözüm: apt install ffmpeg (Linux)")
-    except Exception as e:
-        print(f"       ⚠️ FFmpeg kontrol hatası: {e}")
-    
-    # Sonuç özeti
-    print("\n" + "=" * 50)
-    print("📊 WARM-UP SONUÇLARI:")
-    print("=" * 50)
-    
-    status_icons = {True: "✅", False: "❌", None: "⚪"}
-    
-    print(f"   🤖 Groq AI:    {status_icons[warmup_results['groq']]} {'Hazır' if warmup_results['groq'] else 'Hazır Değil'}")
-    print(f"   🔥 Firebase:   {status_icons[warmup_results['firebase']]} {'Hazır' if warmup_results['firebase'] else 'Hazır Değil'}")
-    print(f"   💬 Discord:    {status_icons[warmup_results['discord']]} {'Hazır' if warmup_results['discord'] else 'Hazır Değil'}")
-    print(f"   🎵 YouTube:    {status_icons[warmup_results['youtube']]} {'Hazır' if warmup_results['youtube'] else 'Hazır Değil'}")
-    print(f"   🔊 FFmpeg:     {status_icons[warmup_results['ffmpeg']]} {'Hazır' if warmup_results['ffmpeg'] else 'Hazır Değil'}")
-    
-    # Uyarılar
-    warnings = []
-    if not warmup_results['youtube']:
-        warnings.append("⚠️ YouTube/yt-dlp hazır değil - müzik komutları çalışmayabilir!")
-    if not warmup_results['ffmpeg']:
-        warnings.append("⚠️ FFmpeg bulunamadı - müzik çalmayacak!")
-    if not warmup_results['groq']:
-        warnings.append("⚠️ Groq AI hazır değil - AI komutları yavaş olabilir")
-    
-    if warnings:
-        print("")
-        for w in warnings:
-            print(f"   {w}")
-    
-    print("")
-    print("=" * 50)
-    print("✅ WARM-UP TAMAMLANDI!")
-    print("=" * 50)
-    
-    return warmup_results
+            if not query.startswith(('http://', 'https://')):
+                query = f"ytsearch:{query}"
 
-# =====================================================
-# 💓 KEEP-ALIVE SİSTEMİ (GELİŞMİŞ)
-# =====================================================
+            print(f"[INFO] 🔍 Aranıyor: {query}")
+            info = ydl.extract_info(query, download=False)
 
-async def keep_systems_alive():
-    """Sistemleri periyodik olarak canlı tut"""
-    await asyncio.sleep(30)  # İlk 30 saniye bekle
-    
-    cycle_count = 0
-    
-    while True:
-        try:
-            cycle_count += 1
-            current_time = datetime.now().strftime('%H:%M:%S')
-            
-            # Her 10 döngüde bir detaylı log
-            verbose = (cycle_count % 10 == 0)
-            
-            # Groq'u canlı tut
-            if groq_client:
-                try:
-                    await asyncio.to_thread(
-                        groq_client.chat.completions.create,
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": "ping"}],
-                        max_tokens=1
-                    )
-                    if verbose:
-                        print(f"💓 [{current_time}] Groq AI: ✅")
-                except Exception as e:
-                    print(f"⚠️ [{current_time}] Groq keep-alive hatası: {str(e)[:50]}")
-            
-            # Firebase'i canlı tut
-            if db:
-                try:
-                    await asyncio.to_thread(
-                        db.collection('_keepalive').limit(1).get
-                    )
-                    if verbose:
-                        print(f"💓 [{current_time}] Firebase: ✅")
-                except Exception as e:
-                    if verbose:
-                        print(f"⚠️ [{current_time}] Firebase keep-alive hatası: {str(e)[:50]}")
-            
-            # Bot durumunu güncelle (her 5 döngüde)
-            if cycle_count % 5 == 0:
-                try:
-                    guild_count = len(bot.guilds)
-                    await bot.change_presence(
-                        activity=discord.Activity(
-                            type=discord.ActivityType.listening,
-                            name=f"/yardım | {guild_count} sunucu"
-                        )
-                    )
-                except:
-                    pass
-            
-        except Exception as e:
-            print(f"⚠️ Keep-alive döngü hatası: {e}")
-        
-        await asyncio.sleep(60)  # 60 saniyede bir
+            if 'entries' in info:
+                if len(info['entries']) == 0:
+                    print("[HATA] ❌ Sonuç bulunamadı")
+                    return None, None
+                info = info['entries'][0]
 
-# =====================================================
-# 🎵 MÜZİK İNAKTİVİTE KONTROLÜ
-# =====================================================
-
-async def check_voice_inactivity():
-    """Müzik çalmayan botları ses kanalından çıkar"""
-    await asyncio.sleep(60)  # 1 dakika bekle
-    
-    while True:
-        try:
-            for vc in bot.voice_clients:
-                # Eğer çalmıyorsa ve duraklatılmamışsa
-                if not vc.is_playing() and not vc.is_paused():
-                    # 2 dakika bekle
-                    await asyncio.sleep(120)
-                    
-                    # Tekrar kontrol et
-                    if vc.is_connected() and not vc.is_playing() and not vc.is_paused():
-                        await vc.disconnect()
-                        print(f"🔇 İnaktivite: {vc.guild.name} kanalından ayrıldı")
+            # ✅ Audio URL bul
+            audio_url = None
+            
+            # Direkt URL
+            if info.get('url'):
+                audio_url = info['url']
+                print(f"[INFO] ✅ Direkt URL bulundu")
+            
+            # Formatlardan seç
+            elif 'formats' in info:
+                formats = info['formats']
                 
-                # Boş kanal kontrolü
-                elif vc.channel and len(vc.channel.members) == 1:
-                    await asyncio.sleep(60)
+                # Sadece audio formatları
+                audio_formats = [
+                    f for f in formats 
+                    if f.get('acodec') != 'none' 
+                    and f.get('vcodec') in ['none', None]
+                    and f.get('url')
+                    and not f.get('format_id', '').startswith('sb')  # Storyboard'ları atla
+                ]
+                
+                if audio_formats:
+                    best = max(audio_formats, key=lambda x: x.get('abr') or x.get('tbr') or 0)
+                    audio_url = best['url']
+                    print(f"[INFO] ✅ Audio format: {best.get('format_id')} ({best.get('abr')}kbps)")
+                else:
+                    # Video+audio formatları
+                    video_formats = [
+                        f for f in formats 
+                        if f.get('acodec') != 'none' 
+                        and f.get('url')
+                        and not f.get('format_id', '').startswith('sb')
+                    ]
                     
-                    if vc.is_connected() and vc.channel and len(vc.channel.members) == 1:
-                        await vc.disconnect()
-                        print(f"🔇 Boş kanal: {vc.guild.name} kanalından ayrıldı")
-        
-        except Exception as e:
-            pass  # Sessizce geç
-        
-        await asyncio.sleep(30)
+                    if video_formats:
+                        best = min(video_formats, key=lambda x: x.get('height') or 9999)
+                        audio_url = best['url']
+                        print(f"[INFO] ⚠️ Video format kullanılıyor: {best.get('format_id')}")
 
-# =====================================================
-# 🚀 BOT EVENTLARI
-# =====================================================
+            if not audio_url:
+                print("[HATA] ❌ Oynatılabilir URL bulunamadı")
+                return None, None
 
-@bot.event
-async def on_ready():
-    print("")
-    print("=" * 50)
-    print(f"🤖 BOT BAŞARIYLA GİRİŞ YAPTI!")
-    print("=" * 50)
-    print(f"   📛 İsim:          {bot.user.name}")
-    print(f"   🆔 ID:            {bot.user.id}")
-    print(f"   📊 Sunucu Sayısı: {len(bot.guilds)}")
-    print(f"   👥 Kullanıcılar:  {sum(g.member_count for g in bot.guilds)}")
-    print(f"   🔥 Firebase:      {'✅ Bağlı' if db else '❌ Bağlı Değil'}")
-    print(f"   🤖 AI:            {'✅ Aktif' if groq_client else '⚪ Pasif'}")
-    print("=" * 50)
-    
-    # 🔥 SİSTEMLERİ ISIT
-    warmup_results = await warmup_systems()
-    
-    # 💓 KEEP-ALIVE BAŞLAT
-    bot.loop.create_task(keep_systems_alive())
-    
-    # 🎵 MÜZİK İNAKTİVİTE KONTROLÜ
-    bot.loop.create_task(check_voice_inactivity())
-    
-    # Slash komutlarını senkronize et
-    print("\n🔄 Slash komutları senkronize ediliyor...")
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ {len(synced)} slash komutu senkronize edildi!")
-        
-        # Komut listesini göster
-        if synced:
-            print("\n📋 Yüklenen komutlar:")
-            for cmd in sorted(synced, key=lambda x: x.name)[:15]:
-                print(f"   /{cmd.name}")
-            if len(synced) > 15:
-                print(f"   ... ve {len(synced) - 15} komut daha")
+            title = info.get('title', 'Bilinmeyen Şarkı')
+            duration = info.get('duration', 0)
+            thumbnail = info.get('thumbnail')
+            
+            if not thumbnail and info.get('thumbnails'):
+                thumbnail = info['thumbnails'][-1].get('url')
+
+            print(f"[INFO] ✅ Başarılı: {title[:50]}...")
+            
+            return audio_url, {
+                'title': title,
+                'duration': duration,
+                'thumbnail': thumbnail
+            }
+
     except Exception as e:
-        print(f"❌ Slash komut senkronizasyon hatası: {e}")
-    
-    # Discord durumunu ayarla
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.listening,
-            name=f"/yardım | {len(bot.guilds)} sunucu"
-        ),
-        status=discord.Status.online
-    )
-    
-    print("")
-    print("=" * 50)
-    print("🎉 BOT TAMAMEN HAZIR!")
-    print("   Komutlar aktif, müzik sistemi hazır.")
-    print("=" * 50)
-    print("")
+        print(f"[HATA] ❌ Arama hatası: {e}")
+        return None, None
 
-@bot.event
-async def on_connect():
-    print("🔌 Discord'a bağlanıldı!")
 
-@bot.event
-async def on_disconnect():
-    print("⚠️ Discord bağlantısı kesildi!")
+async def ensure_voice_connection(channel, existing_vc=None):
+    """Ses kanalına bağlantıyı garanti et"""
+    try:
+        if existing_vc:
+            if existing_vc.channel.id == channel.id:
+                return existing_vc, None
+            await existing_vc.move_to(channel)
+            await asyncio.sleep(0.5)
+            return existing_vc, None
 
-@bot.event
-async def on_resumed():
-    print("🔄 Discord bağlantısı yeniden kuruldu!")
+        vc = await channel.connect()
 
-@bot.event
-async def on_member_join(member):
-    kanal = member.guild.system_channel
-    if kanal:
-        embed = discord.Embed(
-            title="🎉 Hoş Geldin!",
-            description=(
-                f"{member.mention} sunucumuza katıldı!\n\n"
-                f"👋 Seninle birlikte **{member.guild.member_count}** kişiyiz!\n\n"
-                f"`/yardım` yazarak komutları görebilirsin."
-            ),
-            color=discord.Color.green(),
-            timestamp=datetime.now()
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"{member.guild.name}")
+        for i in range(10):
+            if vc.is_connected():
+                break
+            await asyncio.sleep(0.5)
+
+        if not vc.is_connected():
+            return None, "Ses kanalına bağlanılamadı!"
+
+        return vc, None
+
+    except Exception as e:
+        return None, str(e)
+
+
+def format_duration(seconds):
+    if not seconds:
+        return "Bilinmiyor"
+    minutes, secs = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
+# =====================================================
+# 🎵 MÜZİK COG
+# =====================================================
+
+class Muzik(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    def create_play_next_callback(self, guild_id, vc, text_channel):
+        def play_next(error):
+            if error:
+                print(f"[HATA] Oynatma hatası: {error}")
+
+            queue = get_queue(guild_id)
+
+            if len(queue) > 0 and vc.is_connected():
+                next_song = queue.pop(0)
+                
+                try:
+                    # Yeni URL al (eski URL expire olmuş olabilir)
+                    new_url, new_info = search_and_get_audio(next_song['info']['title'])
+                    
+                    if new_url:
+                        audio_url = new_url
+                        song_info = new_info
+                    else:
+                        audio_url = next_song['url']
+                        song_info = next_song['info']
+                    
+                    source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
+                    vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
+                    set_now_playing(guild_id, song_info['title'])
+
+                    embed = discord.Embed(
+                        title="🎵 Şimdi Çalıyor",
+                        description=f"**{song_info['title']}**",
+                        color=discord.Color.green()
+                    )
+                    if song_info.get('duration'):
+                        embed.add_field(name="⏱️ Süre", value=format_duration(song_info['duration']))
+                    if song_info.get('thumbnail'):
+                        embed.set_thumbnail(url=song_info['thumbnail'])
+
+                    asyncio.run_coroutine_threadsafe(
+                        text_channel.send(embed=embed),
+                        self.bot.loop
+                    )
+                except Exception as e:
+                    print(f"[HATA] Sonraki şarkı çalınamadı: {e}")
+                    clear_now_playing(guild_id)
+                    
+                    # Sıradakini dene
+                    if len(queue) > 0:
+                        asyncio.run_coroutine_threadsafe(
+                            text_channel.send("⚠️ Şarkı çalınamadı, sıradaki deneniyor..."),
+                            self.bot.loop
+                        )
+                        play_next(None)
+            else:
+                clear_now_playing(guild_id)
+
+        return play_next
+
+    async def play_song(self, vc, guild_id, audio_url, song_info, text_channel):
+        try:
+            source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
+            vc.play(source, after=self.create_play_next_callback(guild_id, vc, text_channel))
+            set_now_playing(guild_id, song_info['title'])
+            return True
+        except Exception as e:
+            print(f"[HATA] Şarkı çalınamadı: {e}")
+            return False
+
+    def create_now_playing_embed(self, song_info, queue_position=None):
+        if queue_position:
+            embed = discord.Embed(title="➕ Kuyruğa Eklendi", color=discord.Color.blue())
+            embed.add_field(name="📋 Sıra", value=f"#{queue_position}", inline=True)
+        else:
+            embed = discord.Embed(title="🎵 Şimdi Çalıyor", color=discord.Color.green())
+
+        embed.description = f"**{song_info['title']}**"
+
+        if song_info.get('duration'):
+            embed.add_field(name="⏱️ Süre", value=format_duration(song_info['duration']), inline=True)
+
+        if song_info.get('thumbnail'):
+            embed.set_thumbnail(url=song_info['thumbnail'])
+
+        return embed
+
+    # =====================================================
+    # 🎵 SLASH KOMUTLARI
+    # =====================================================
+
+    @app_commands.command(name="play", description="Müzik çal")
+    @app_commands.describe(şarkı="Şarkı adı veya YouTube linki")
+    async def slash_play(self, interaction: discord.Interaction, şarkı: str):
+        if not interaction.user.voice:
+            await interaction.response.send_message("❌ Önce bir ses kanalına katıl!", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+
+        channel = interaction.user.voice.channel
+        vc = interaction.guild.voice_client
+
+        vc, error = await ensure_voice_connection(channel, vc)
+
+        if error:
+            await interaction.followup.send(f"❌ {error}")
+            return
+
+        if not vc:
+            await interaction.followup.send("❌ Ses kanalına bağlanılamadı!")
+            return
+
+        searching_msg = await interaction.followup.send(f"🔍 Aranıyor: **{şarkı}**")
+
+        audio_url, song_info = await asyncio.to_thread(search_and_get_audio, şarkı)
+
+        if not audio_url:
+            error_msg = (
+                "❌ Şarkı bulunamadı!\n\n"
+                "**Olası sebepler:**\n"
+                "• YouTube bot koruması aktif\n"
+                "• JavaScript runtime eksik (Deno/Node.js)\n"
+                "• Çerez dosyası geçersiz\n\n"
+                "**Çözüm:**\n"
+                "```bash\n"
+                "curl -fsSL https://deno.land/install.sh | sh\n"
+                "```"
+            )
+            await searching_msg.edit(content=error_msg)
+            return
+
+        if vc.is_playing() or vc.is_paused():
+            queue = get_queue(interaction.guild.id)
+            queue.append({'url': audio_url, 'info': song_info})
+            embed = self.create_now_playing_embed(song_info, queue_position=len(queue))
+            await searching_msg.edit(content=None, embed=embed)
+            return
+
+        success = await self.play_song(vc, interaction.guild.id, audio_url, song_info, interaction.channel)
+
+        if success:
+            embed = self.create_now_playing_embed(song_info)
+            await searching_msg.edit(content=None, embed=embed)
+        else:
+            await searching_msg.edit(content="❌ Şarkı çalınamadı!")
+
+    @app_commands.command(name="pause", description="Müziği duraklat")
+    async def slash_pause(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
+        if vc.is_playing():
+            vc.pause()
+            await interaction.response.send_message("⏸️ Müzik duraklatıldı!")
+        elif vc.is_paused():
+            await interaction.response.send_message("❌ Müzik zaten duraklatılmış!", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ Çalan müzik yok!", ephemeral=True)
+
+    @app_commands.command(name="devam", description="Müziği devam ettir")
+    async def slash_devam(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
+        if vc.is_paused():
+            vc.resume()
+            await interaction.response.send_message("▶️ Müzik devam ediyor!")
+        else:
+            await interaction.response.send_message("❌ Duraklatılmış şarkı yok!", ephemeral=True)
+
+    @app_commands.command(name="skip", description="Şarkıyı atla")
+    async def slash_skip(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+            await interaction.response.send_message("⏭️ Şarkı atlandı!")
+        else:
+            await interaction.response.send_message("❌ Atlanacak şarkı yok!", ephemeral=True)
+
+    @app_commands.command(name="stop", description="Müziği durdur ve kuyruğu temizle")
+    async def slash_stop(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
+        get_queue(interaction.guild.id).clear()
+        clear_now_playing(interaction.guild.id)
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+        await interaction.response.send_message("⏹️ Müzik durduruldu ve kuyruk temizlendi!")
+
+    @app_commands.command(name="leave", description="Ses kanalından ayrıl")
+    async def slash_leave(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        if not vc:
+            await interaction.response.send_message("❌ Zaten ses kanalında değilim!", ephemeral=True)
+            return
+        get_queue(interaction.guild.id).clear()
+        clear_now_playing(interaction.guild.id)
+        await vc.disconnect()
+        await interaction.response.send_message("👋 Ses kanalından ayrıldım!")
+
+    @app_commands.command(name="queue", description="Müzik kuyruğunu göster")
+    async def slash_queue(self, interaction: discord.Interaction):
+        queue = get_queue(interaction.guild.id)
+        current = get_now_playing(interaction.guild.id)
+
+        embed = discord.Embed(title="📋 Müzik Kuyruğu", color=discord.Color.blue())
+
+        if current:
+            embed.add_field(name="🎵 Şu An Çalıyor", value=f"**{current}**", inline=False)
+
+        if len(queue) == 0:
+            embed.description = "Kuyrukta şarkı yok."
+        else:
+            text = ""
+            for i, song in enumerate(queue[:10]):
+                title = song['info']['title'][:45]
+                if len(song['info']['title']) > 45:
+                    title += "..."
+                text += f"**{i+1}.** {title}\n"
+
+            if len(queue) > 10:
+                text += f"\n*... ve {len(queue) - 10} şarkı daha*"
+
+            embed.add_field(name="📜 Sıradaki Şarkılar", value=text, inline=False)
+
+        embed.set_footer(text=f"Toplam: {len(queue)} şarkı kuyrukta")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="join", description="Ses kanalına katıl")
+    async def slash_join(self, interaction: discord.Interaction):
+        if not interaction.user.voice:
+            await interaction.response.send_message("❌ Önce bir ses kanalına katıl!", ephemeral=True)
+            return
+        channel = interaction.user.voice.channel
+        vc = interaction.guild.voice_client
+        vc, error = await ensure_voice_connection(channel, vc)
+        if error:
+            await interaction.response.send_message(f"❌ {error}", ephemeral=True)
+            return
+        await interaction.response.send_message(f"🔊 **{channel.name}** kanalına katıldım!")
+
+    @app_commands.command(name="np", description="Şu an çalan şarkıyı göster")
+    async def slash_np(self, interaction: discord.Interaction):
+        vc = interaction.guild.voice_client
+        current = get_now_playing(interaction.guild.id)
+        if not vc or not vc.is_connected():
+            await interaction.response.send_message("❌ Bot ses kanalında değil!", ephemeral=True)
+            return
+        if not current or (not vc.is_playing() and not vc.is_paused()):
+            await interaction.response.send_message("❌ Şu an çalan şarkı yok!", ephemeral=True)
+            return
+        status = "⏸️ Duraklatıldı" if vc.is_paused() else "▶️ Çalıyor"
+        embed = discord.Embed(title="🎵 Şu An Çalıyor", color=discord.Color.green())
+        embed.description = f"**{current}**"
+        embed.add_field(name="Durum", value=status)
+        queue = get_queue(interaction.guild.id)
+        if len(queue) > 0:
+            embed.add_field(name="Sırada", value=f"{len(queue)} şarkı")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="shuffle", description="Kuyruğu karıştır")
+    async def slash_shuffle(self, interaction: discord.Interaction):
+        queue = get_queue(interaction.guild.id)
+        if len(queue) < 2:
+            await interaction.response.send_message("❌ Karıştırılacak yeterli şarkı yok!", ephemeral=True)
+            return
+        random.shuffle(queue)
+        await interaction.response.send_message(f"🔀 Kuyruk karıştırıldı! ({len(queue)} şarkı)")
+
+    @app_commands.command(name="qclear", description="Müzik kuyruğunu temizle")
+    async def slash_qclear(self, interaction: discord.Interaction):
+        queue = get_queue(interaction.guild.id)
+        count = len(queue)
+        queue.clear()
+        await interaction.response.send_message(f"🗑️ Kuyruk temizlendi! ({count} şarkı silindi)")
+
+    # =====================================================
+    # 🔧 TEST KOMUTU
+    # =====================================================
+
+    @app_commands.command(name="yttest", description="YouTube bağlantısını test et")
+    async def slash_yttest(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        results = []
+        
+        # JavaScript runtime
+        if JS_RUNTIME:
+            results.append(f"✅ JavaScript Runtime: {JS_RUNTIME} {JS_VERSION}")
+        else:
+            results.append("❌ JavaScript Runtime: Bulunamadı")
+            results.append("   💡 Çözüm: curl -fsSL https://deno.land/install.sh | sh")
+        
+        # yt-dlp versiyonu
+        try:
+            results.append(f"✅ yt-dlp: v{yt_dlp.version.__version__}")
+        except:
+            results.append("⚠️ yt-dlp versiyonu alınamadı")
+        
+        # Çerez dosyası
+        if COOKIE_FILE and os.path.exists(COOKIE_FILE):
+            size = os.path.getsize(COOKIE_FILE)
+            results.append(f"✅ Çerez dosyası: {size} bytes")
+        else:
+            results.append("⚠️ Çerez dosyası bulunamadı")
+        
+        # Test arama
+        results.append("\n🔍 Test araması yapılıyor...")
         
         try:
-            await kanal.send(embed=embed)
-        except discord.Forbidden:
-            pass
+            audio_url, song_info = await asyncio.to_thread(search_and_get_audio, "Rick Astley Never Gonna")
+            
+            if audio_url:
+                results.append(f"✅ Video bulundu: {song_info['title'][:40]}...")
+                results.append(f"✅ URL uzunluğu: {len(audio_url)} karakter")
+            else:
+                results.append("❌ Video bulunamadı")
         except Exception as e:
-            print(f"⚠️ Karşılama mesajı hatası: {e}")
-
-@bot.event
-async def on_member_remove(member):
-    kanal = member.guild.system_channel
-    if kanal:
+            results.append(f"❌ Test hatası: {str(e)[:80]}")
+        
         embed = discord.Embed(
-            title="👋 Görüşürüz!",
-            description=f"**{member.name}** sunucudan ayrıldı.",
+            title="🔧 YouTube Sistem Testi",
+            description="\n".join(results),
             color=discord.Color.orange()
         )
         
-        try:
-            await kanal.send(embed=embed)
-        except:
-            pass
+        await interaction.followup.send(embed=embed)
 
-@bot.event
-async def on_guild_join(guild):
-    print(f"✅ Yeni sunucuya katıldım: {guild.name} ({guild.member_count} üye)")
-    
-    # Yetkilendirme kontrolü
-    permissions = guild.me.guild_permissions
-    missing_perms = []
-    
-    if not permissions.send_messages:
-        missing_perms.append("Mesaj Gönderme")
-    if not permissions.embed_links:
-        missing_perms.append("Embed Gönderme")
-    if not permissions.connect:
-        missing_perms.append("Ses Kanalına Bağlanma")
-    if not permissions.speak:
-        missing_perms.append("Konuşma")
-    
-    if missing_perms:
-        print(f"   ⚠️ Eksik yetkiler: {', '.join(missing_perms)}")
-    
-    # Hoşgeldin mesajı
-    if guild.system_channel:
-        embed = discord.Embed(
-            title="⚡ Merhaba!",
-            description=(
-                "Ben **WOWSY Bot**!\n\n"
-                "🎵 **Müzik** - YouTube'dan şarkı çal\n"
-                "🎮 **Oyunlar** - Eğlenceli mini oyunlar\n"
-                "💰 **Ekonomi** - Sanal para sistemi\n"
-                "🤖 **AI** - Yapay zeka sohbet\n"
-                "🛡️ **Moderasyon** - Sunucu yönetimi\n\n"
-                "📚 `/yardım` yazarak başla!"
-            ),
-            color=discord.Color.gold()
-        )
-        embed.set_thumbnail(url=bot.user.display_avatar.url)
-        
-        try:
-            await guild.system_channel.send(embed=embed)
-        except:
-            pass
+    # =====================================================
+    # 🎵 PREFIX KOMUTLARI
+    # =====================================================
 
-@bot.event
-async def on_guild_remove(guild):
-    print(f"❌ Sunucudan ayrıldım: {guild.name} (ID: {guild.id})")
-
-@bot.event
-async def on_message(message):
-    # Bot mesajlarını yoksay
-    if message.author.bot:
-        return
-    
-    # DM kontrolü
-    if not message.guild:
-        await message.channel.send(
-            "👋 Merhaba! Ben sunucularda çalışan bir botum.\n"
-            "Beni bir sunucuya ekleyerek kullanabilirsin!"
-        )
-        return
-    
-    # Komutları işle
-    await bot.process_commands(message)
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-    """Ses kanalı değişikliklerini izle"""
-    # Bot değişikliklerini yoksay
-    if member.bot and member.id != bot.user.id:
-        return
-    
-    # Bot'un kendi değişiklikleri
-    if member.id == bot.user.id:
-        if after.channel is None:
-            # Bot kanaldan ayrıldı
-            print(f"🔇 {member.guild.name}: Ses kanalından ayrıldım")
-        elif before.channel is None:
-            # Bot kanala katıldı
-            print(f"🔊 {member.guild.name}: {after.channel.name} kanalına katıldım")
-        return
-    
-    # Kullanıcı kanaldan ayrıldığında boş kanal kontrolü
-    voice_client = member.guild.voice_client
-    if voice_client and voice_client.channel:
-        # Sadece bot kaldıysa
-        if len(voice_client.channel.members) == 1:
-            # 60 saniye bekle
-            await asyncio.sleep(60)
-            
-            # Tekrar kontrol et
-            voice_client = member.guild.voice_client
-            if voice_client and voice_client.channel and len(voice_client.channel.members) == 1:
-                try:
-                    await voice_client.disconnect()
-                    print(f"🔇 Boş kanal, otomatik ayrıldım: {member.guild.name}")
-                except:
-                    pass
-
-# =====================================================
-# ❌ HATA YÖNETİMİ (GELİŞMİŞ)
-# =====================================================
-
-@bot.event
-async def on_command_error(ctx, error):
-    """Prefix komut hataları"""
-    
-    # Komut bulunamadı - sessizce geç
-    if isinstance(error, commands.CommandNotFound):
-        return
-    
-    # Cooldown hatası
-    if isinstance(error, commands.CommandOnCooldown):
-        dakika = int(error.retry_after // 60)
-        saniye = int(error.retry_after % 60)
-        if dakika > 0:
-            await ctx.send(f"⏰ Bekle: **{dakika}dk {saniye}sn**", delete_after=10)
-        else:
-            await ctx.send(f"⏰ Bekle: **{saniye} saniye**", delete_after=10)
-        return
-    
-    # Yetki hataları
-    if isinstance(error, commands.MissingPermissions):
-        perms = ", ".join(error.missing_permissions)
-        await ctx.send(f"❌ Eksik yetki: `{perms}`", delete_after=10)
-        return
-    
-    if isinstance(error, commands.BotMissingPermissions):
-        perms = ", ".join(error.missing_permissions)
-        await ctx.send(f"❌ Botun eksik yetkisi: `{perms}`", delete_after=10)
-        return
-    
-    # Kullanıcı bulunamadı
-    if isinstance(error, commands.MemberNotFound):
-        await ctx.send("❌ Kullanıcı bulunamadı!", delete_after=10)
-        return
-    
-    # Kanal bulunamadı
-    if isinstance(error, commands.ChannelNotFound):
-        await ctx.send("❌ Kanal bulunamadı!", delete_after=10)
-        return
-    
-    # Eksik parametre
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"❌ Eksik parametre: `{error.param.name}`", delete_after=10)
-        return
-    
-    # Yanlış parametre türü
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Yanlış parametre türü!", delete_after=10)
-        return
-    
-    # NSFW kanal gerekli
-    if isinstance(error, commands.NSFWChannelRequired):
-        await ctx.send("❌ Bu komut sadece NSFW kanallarda çalışır!", delete_after=10)
-        return
-    
-    # Bilinmeyen hatalar - logla
-    print(f"❌ Komut Hatası [{ctx.command}]: {type(error).__name__}: {error}")
-    
-    # Kullanıcıya genel hata mesajı
-    try:
-        await ctx.send("❌ Bir hata oluştu!", delete_after=10)
-    except:
-        pass
-
-@bot.tree.error
-async def on_app_command_error(interaction: discord.Interaction, error):
-    """Slash komut hataları"""
-    
-    # Utils modülünden güvenli cevap fonksiyonu
-    try:
-        from utils import guvenli_cevap
-    except ImportError:
-        # Fallback fonksiyon
-        async def guvenli_cevap(inter, msg, ephemeral=False):
-            try:
-                if inter.response.is_done():
-                    await inter.followup.send(msg, ephemeral=ephemeral)
-                else:
-                    await inter.response.send_message(msg, ephemeral=ephemeral)
-            except:
-                pass
-    
-    # Orijinal hatayı al
-    error = getattr(error, 'original', error)
-    
-    # Cooldown hatası
-    if isinstance(error, app_commands.CommandOnCooldown):
-        await guvenli_cevap(
-            interaction, 
-            f"⏰ Bekle: **{int(error.retry_after)}sn**", 
-            ephemeral=True
-        )
-        return
-    
-    # Yetki hataları
-    if isinstance(error, app_commands.MissingPermissions):
-        await guvenli_cevap(
-            interaction, 
-            "❌ Bu komutu kullanma yetkin yok!", 
-            ephemeral=True
-        )
-        return
-    
-    if isinstance(error, app_commands.BotMissingPermissions):
-        await guvenli_cevap(
-            interaction, 
-            "❌ Botun bu işlemi yapma yetkisi yok!", 
-            ephemeral=True
-        )
-        return
-    
-    # Kontrol başarısız
-    if isinstance(error, app_commands.CheckFailure):
-        await guvenli_cevap(
-            interaction, 
-            "❌ Bu komutu kullanma yetkin yok!", 
-            ephemeral=True
-        )
-        return
-    
-    # Discord API hataları
-    if isinstance(error, discord.HTTPException):
-        print(f"❌ Discord API Hatası: {error.status} - {error.text}")
-        await guvenli_cevap(
-            interaction, 
-            "❌ Discord API hatası oluştu!", 
-            ephemeral=True
-        )
-        return
-    
-    # Bilinmeyen hatalar - logla
-    print(f"❌ Slash Hatası [{interaction.command.name if interaction.command else 'Unknown'}]: {type(error).__name__}: {error}")
-    
-    # Kullanıcıya genel hata mesajı
-    try:
-        await guvenli_cevap(interaction, "❌ Bir hata oluştu!", ephemeral=True)
-    except:
-        pass
-
-# =====================================================
-# 📦 COG'LARI YÜKLE
-# =====================================================
-
-async def load_cogs():
-    """Tüm cog'ları yükle"""
-    
-    cog_list = [
-        ('cogs.ekonomi', '💰'),
-        ('cogs.oyunlar', '🎮'),
-        ('cogs.muzik', '🎵'),
-        ('cogs.moderasyon', '🛡️'),
-        ('cogs.eglence', '🎭'),
-        ('cogs.bilgi', 'ℹ️'),
-        ('cogs.yapay_zeka', '🤖'),
-        ('cogs.yardim', '📚'),
-    ]
-    
-    print("\n📦 COG'LAR YÜKLENİYOR...")
-    print("-" * 40)
-    
-    loaded = 0
-    failed = 0
-    
-    for cog_name, emoji in cog_list:
-        try:
-            await bot.load_extension(cog_name)
-            print(f"   {emoji} {cog_name.split('.')[-1].capitalize()}: ✅ Yüklendi")
-            loaded += 1
-        except commands.ExtensionNotFound:
-            print(f"   {emoji} {cog_name.split('.')[-1].capitalize()}: ❌ Dosya bulunamadı")
-            failed += 1
-        except commands.ExtensionFailed as e:
-            print(f"   {emoji} {cog_name.split('.')[-1].capitalize()}: ❌ Hata")
-            print(f"      └─ {e.original}")
-            failed += 1
-        except Exception as e:
-            print(f"   {emoji} {cog_name.split('.')[-1].capitalize()}: ❌ {e}")
-            failed += 1
-    
-    print("-" * 40)
-    print(f"📊 Sonuç: {loaded} yüklendi, {failed} başarısız")
-    print("")
-    
-    return loaded, failed
-
-# =====================================================
-# 🔧 YARDIMCI KOMUTLAR (SAHİP İÇİN)
-# =====================================================
-
-@bot.command(name='reload', hidden=True)
-@commands.is_owner()
-async def reload_cog(ctx, cog_name: str):
-    """Bir cog'u yeniden yükle (Sadece bot sahibi)"""
-    try:
-        await bot.reload_extension(f'cogs.{cog_name}')
-        await ctx.send(f"✅ `{cog_name}` yeniden yüklendi!")
-    except Exception as e:
-        await ctx.send(f"❌ Hata: {e}")
-
-@bot.command(name='sync', hidden=True)
-@commands.is_owner()
-async def sync_commands(ctx):
-    """Slash komutlarını senkronize et (Sadece bot sahibi)"""
-    try:
-        synced = await bot.tree.sync()
-        await ctx.send(f"✅ {len(synced)} komut senkronize edildi!")
-    except Exception as e:
-        await ctx.send(f"❌ Hata: {e}")
-
-@bot.command(name='status', hidden=True)
-@commands.is_owner()
-async def bot_status(ctx):
-    """Bot durumunu göster (Sadece bot sahibi)"""
-    embed = discord.Embed(
-        title="📊 Bot Durumu",
-        color=discord.Color.blue(),
-        timestamp=datetime.now()
-    )
-    
-    embed.add_field(
-        name="📡 Bağlantı",
-        value=f"Gecikme: {round(bot.latency * 1000)}ms",
-        inline=True
-    )
-    embed.add_field(
-        name="📊 Sunucular",
-        value=f"{len(bot.guilds)} sunucu",
-        inline=True
-    )
-    embed.add_field(
-        name="🎵 Ses Bağlantıları",
-        value=f"{len(bot.voice_clients)} aktif",
-        inline=True
-    )
-    embed.add_field(
-        name="🔥 Firebase",
-        value="✅ Bağlı" if db else "❌ Bağlı Değil",
-        inline=True
-    )
-    embed.add_field(
-        name="🤖 Groq AI",
-        value="✅ Aktif" if groq_client else "⚪ Pasif",
-        inline=True
-    )
-    
-    # Çerez durumu
-    cookie_ok, cookie_msg = check_youtube_cookies()
-    embed.add_field(
-        name="🍪 YouTube Çerez",
-        value=f"{'✅' if cookie_ok else '❌'} {cookie_msg}",
-        inline=True
-    )
-    
-    await ctx.send(embed=embed)
-
-# =====================================================
-# 🚀 BOTU BAŞLAT
-# =====================================================
-
-async def main():
-    """Ana fonksiyon"""
-    
-    async with bot:
-        # Cog'ları yükle
-        loaded, failed = await load_cogs()
-        
-        if loaded == 0:
-            print("⚠️ Hiçbir cog yüklenemedi! Devam ediliyor...")
-        
-        # Token kontrolü
-        if not DISCORD_TOKEN:
-            print("")
-            print("❌ DISCORD_TOKEN bulunamadı!")
-            print("   .env dosyasını kontrol edin.")
+    @commands.command(aliases=['p', 'çal', 'oynat'])
+    async def play(self, ctx, *, query):
+        if not ctx.author.voice:
+            await ctx.send("❌ Önce bir ses kanalına katıl!")
             return
-        
-        # Botu başlat
+
+        msg = await ctx.send(f"🔍 Aranıyor: **{query}**")
+
+        channel = ctx.author.voice.channel
+        vc = ctx.voice_client
+
+        vc, error = await ensure_voice_connection(channel, vc)
+
+        if error:
+            await msg.edit(content=f"❌ {error}")
+            return
+
+        if not vc:
+            await msg.edit(content="❌ Ses kanalına bağlanılamadı!")
+            return
+
+        audio_url, song_info = await asyncio.to_thread(search_and_get_audio, query)
+
+        if not audio_url:
+            await msg.edit(content="❌ Şarkı bulunamadı! YouTube koruması aktif olabilir.")
+            return
+
+        if vc.is_playing() or vc.is_paused():
+            queue = get_queue(ctx.guild.id)
+            queue.append({'url': audio_url, 'info': song_info})
+            embed = self.create_now_playing_embed(song_info, queue_position=len(queue))
+            await msg.edit(content=None, embed=embed)
+            return
+
         try:
-            print("🔌 Discord'a bağlanılıyor...")
-            print("")
-            await bot.start(DISCORD_TOKEN)
-            
-        except discord.LoginFailure:
-            print("")
-            print("❌ Discord Token geçersiz!")
-            print("   Token'ı kontrol edin ve yenileyin.")
-            
-        except discord.PrivilegedIntentsRequired:
-            print("")
-            print("❌ Bot için gerekli Intent'ler aktif değil!")
-            print("   Discord Developer Portal'dan Intent'leri aktifleştirin:")
-            print("   - MESSAGE CONTENT INTENT")
-            print("   - SERVER MEMBERS INTENT")
-            
-        except Exception as e:
-            print("")
-            print(f"❌ Beklenmeyen hata: {e}")
-            import traceback
-            traceback.print_exc()
+            await msg.delete()
+        except:
+            pass
 
-# =====================================================
-# 🏃 ÇALIŞTIR
-# =====================================================
+        success = await self.play_song(vc, ctx.guild.id, audio_url, song_info, ctx.channel)
 
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n👋 Bot kapatılıyor...")
-    except Exception as e:
-        print(f"\n❌ Kritik hata: {e}")
-        import traceback
-        traceback.print_exc()
+        if success:
+            embed = self.create_now_playing_embed(song_info)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("❌ Şarkı çalınamadı!")
+
+    @commands.command(aliases=['duraklat', 'dur'])
+    async def pause(self, ctx):
+        vc = ctx.voice_client
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        if vc.is_playing():
+            vc.pause()
+            await ctx.send("⏸️ Müzik duraklatıldı!")
+        else:
+            await ctx.send("❌ Çalan müzik yok!")
+
+    @commands.command(aliases=['resume', 'devam'])
+    async def devam_et(self, ctx):
+        vc = ctx.voice_client
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        if vc.is_paused():
+            vc.resume()
+            await ctx.send("▶️ Müzik devam ediyor!")
+        else:
+            await ctx.send("❌ Duraklatılmış şarkı yok!")
+
+    @commands.command(aliases=['atla', 's', 'next'])
+    async def skip(self, ctx):
+        vc = ctx.voice_client
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+            await ctx.send("⏭️ Şarkı atlandı!")
+        else:
+            await ctx.send("❌ Atlanacak şarkı yok!")
+
+    @commands.command(aliases=['kapat', 'durdur'])
+    async def stop(self, ctx):
+        vc = ctx.voice_client
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        get_queue(ctx.guild.id).clear()
+        clear_now_playing(ctx.guild.id)
+        if vc.is_playing() or vc.is_paused():
+            vc.stop()
+        await ctx.send("⏹️ Müzik durduruldu ve kuyruk temizlendi!")
+
+    @commands.command(aliases=['çık', 'dc', 'disconnect', 'ayrıl'])
+    async def leave(self, ctx):
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.send("❌ Zaten ses kanalında değilim!")
+            return
+        get_queue(ctx.guild.id).clear()
+        clear_now_playing(ctx.guild.id)
+        await vc.disconnect()
+        await ctx.send("👋 Ses kanalından ayrıldım!")
+
+    @commands.command(aliases=['q', 'kuyruk', 'sıra', 'liste'])
+    async def queue(self, ctx):
+        queue = get_queue(ctx.guild.id)
+        current = get_now_playing(ctx.guild.id)
+        embed = discord.Embed(title="📋 Müzik Kuyruğu", color=discord.Color.blue())
+        if current:
+            embed.add_field(name="🎵 Şu An Çalıyor", value=f"**{current}**", inline=False)
+        if len(queue) == 0:
+            embed.description = "Kuyrukta şarkı yok."
+        else:
+            text = ""
+            for i, song in enumerate(queue[:10]):
+                title = song['info']['title'][:45]
+                if len(song['info']['title']) > 45:
+                    title += "..."
+                text += f"**{i+1}.** {title}\n"
+            if len(queue) > 10:
+                text += f"\n*... ve {len(queue) - 10} şarkı daha*"
+            embed.add_field(name="📜 Sıradaki Şarkılar", value=text, inline=False)
+        embed.set_footer(text=f"Toplam: {len(queue)} şarkı kuyrukta")
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['katıl', 'gel', 'connect'])
+    async def join(self, ctx):
+        if not ctx.author.voice:
+            await ctx.send("❌ Önce bir ses kanalına katıl!")
+            return
+        channel = ctx.author.voice.channel
+        vc = ctx.voice_client
+        vc, error = await ensure_voice_connection(channel, vc)
+        if error:
+            await ctx.send(f"❌ {error}")
+            return
+        await ctx.send(f"🔊 **{channel.name}** kanalına katıldım!")
+
+    @commands.command(aliases=['nowplaying', 'şuan'])
+    async def np(self, ctx):
+        vc = ctx.voice_client
+        current = get_now_playing(ctx.guild.id)
+        if not vc or not vc.is_connected():
+            await ctx.send("❌ Bot ses kanalında değil!")
+            return
+        if not current or (not vc.is_playing() and not vc.is_paused()):
+            await ctx.send("❌ Şu an çalan şarkı yok!")
+            return
+        status = "⏸️ Duraklatıldı" if vc.is_paused() else "▶️ Çalıyor"
+        embed = discord.Embed(title="🎵 Şu An Çalıyor", color=discord.Color.green())
+        embed.description = f"**{current}**"
+        embed.add_field(name="Durum", value=status)
+        queue = get_queue(ctx.guild.id)
+        if len(queue) > 0:
+            embed.add_field(name="Sırada", value=f"{len(queue)} şarkı")
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['karistir', 'karıştır'])
+    async def shuffle(self, ctx):
+        queue = get_queue(ctx.guild.id)
+        if len(queue) < 2:
+            await ctx.send("❌ Karıştırılacak yeterli şarkı yok!")
+            return
+        random.shuffle(queue)
+        await ctx.send(f"🔀 Kuyruk karıştırıldı! ({len(queue)} şarkı)")
+
+    @commands.command(aliases=['qclear', 'kuyruktemizle', 'sıfırla'])
+    async def clearqueue(self, ctx):
+        queue = get_queue(ctx.guild.id)
+        count = len(queue)
+        queue.clear()
+        await ctx.send(f"🗑️ Kuyruk temizlendi! ({count} şarkı silindi)")
+
+    @commands.command(aliases=['test', 'yttest'])
+    async def youtube_test(self, ctx):
+        """YouTube bağlantısını test et"""
+        msg = await ctx.send("🔧 YouTube sistemi test ediliyor...")
+        
+        results = []
+        
+        # JS Runtime
+        if JS_RUNTIME:
+            results.append(f"✅ JS Runtime: {JS_RUNTIME}")
+        else:
+            results.append("❌ JS Runtime: Yok")
+        
+        # yt-dlp
+        results.append(f"✅ yt-dlp: v{yt_dlp.version.__version__}")
+        
+        # Test
+        results.append("\n🔍 Test aranıyor...")
+        audio_url, info = await asyncio.to_thread(search_and_get_audio, "test")
+        
+        if audio_url:
+            results.append(f"✅ Başarılı: {info['title'][:40]}")
+        else:
+            results.append("❌ Başarısız")
+        
+        embed = discord.Embed(
+            title="🔧 YouTube Test",
+            description="\n".join(results),
+            color=discord.Color.orange()
+        )
+        await msg.edit(content=None, embed=embed)
+
+    @play.error
+    async def play_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("❌ Kullanım: `!play <şarkı adı veya link>`")
+        else:
+            await ctx.send(f"❌ Bir hata oluştu: {error}")
+
+
+async def setup(bot):
+    await bot.add_cog(Muzik(bot))
