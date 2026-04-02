@@ -383,7 +383,7 @@ class Oyunlar(commands.Cog):
         await ctx.send(embed=embed)
 
     # =====================================================
-    # 🪙 COINFLIP
+    # 🪙 COINFLIP (DAHA AZ TEKRAR EDEN)
     # =====================================================
 
     @app_commands.command(name="coinflip", description="Yazı-tura bahis oyunu")
@@ -401,18 +401,33 @@ class Oyunlar(commands.Cog):
         
         data['para'] -= bahis
         
+        # Önceki sonucu kontrol et (varsa)
+        onceki = data.get('son_coinflip_sonuc', None)
+        
+        # %70 ihtimalle farklı sonuç çıksın
+        if onceki and random.randint(1, 100) <= 70:
+            # Öncekinin tersi
+            sonuc = "TURA" if onceki == "YAZI" else "YAZI"
+        else:
+            # Tamamen rastgele
+            sonuc = random.choice(["YAZI", "TURA"])
+        
+        # Kazanma ihtimali %48 (adil)
         if random.randint(1, 100) <= 48:
+            # Kazandın - gösterilen sonuç senin lehine
             odul = bahis * 2
             data['para'] += odul
-            sonuc = "YAZI"
             emoji = "🪙"
             mesaj = f"🎉 Kazandın! **+{odul:,}💰**"
             renk = discord.Color.green()
         else:
-            sonuc = "TURA"
+            # Kaybettin
             emoji = "💀"
             mesaj = f"😢 Kaybettin! **-{bahis:,}💰**"
             renk = discord.Color.red()
+        
+        # Son sonucu kaydet
+        data['son_coinflip_sonuc'] = sonuc
         
         update_economy(interaction.user.id, data)
         
@@ -437,17 +452,25 @@ class Oyunlar(commands.Cog):
         
         data['para'] -= bahis
         
+        onceki = data.get('son_coinflip_sonuc', None)
+        
+        if onceki and random.randint(1, 100) <= 70:
+            sonuc = "TURA" if onceki == "YAZI" else "YAZI"
+        else:
+            sonuc = random.choice(["YAZI", "TURA"])
+        
         if random.randint(1, 100) <= 48:
             odul = bahis * 2
             data['para'] += odul
-            await ctx.send(f"🪙 **YAZI** - Kazandın! **+{odul:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
+            await ctx.send(f"🪙 **{sonuc}** - Kazandın! **+{odul:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
         else:
-            await ctx.send(f"💀 **TURA** - Kaybettin! **-{bahis:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
+            await ctx.send(f"💀 **{sonuc}** - Kaybettin! **-{bahis:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
         
+        data['son_coinflip_sonuc'] = sonuc
         update_economy(ctx.author.id, data)
 
     # =====================================================
-    # 🎲 ZAR
+    # 🎲 ZAR (YENİ SİSTEM)
     # =====================================================
 
     @app_commands.command(name="dice", description="Zarla bahis - Yüksek sayı kazan!")
@@ -469,24 +492,30 @@ class Oyunlar(commands.Cog):
         zar_emoji = zar_emojiler[zar - 1]
         
         if zar == 6:
-            carpan = 5
+            carpan = 3
             odul = bahis * carpan
             data['para'] += odul
             mesaj = f"🎉 **ALTIN 6!** ({carpan}x)\n+{odul:,}💰"
             renk = discord.Color.gold()
         elif zar == 5:
-            carpan = 3
-            odul = bahis * carpan
+            carpan = 1.5
+            odul = int(bahis * carpan)
             data['para'] += odul
             mesaj = f"✨ **Güzel!** ({carpan}x)\n+{odul:,}💰"
             renk = discord.Color.green()
         elif zar == 4:
-            carpan = 1.5
-            odul = int(bahis * carpan)
+            carpan = 1
+            odul = bahis  # Bahis geri dönüyor
             data['para'] += odul
-            mesaj = f"👍 **İdare eder!** ({carpan}x)\n+{odul:,}💰"
+            mesaj = f"👍 **İdare eder!** ({carpan}x)\nBahis iade: +{odul:,}💰"
             renk = discord.Color.blue()
-        else:
+        elif zar in [1, 2]:
+            # 1-2: Ekstra ceza
+            ceza_ek = bahis // 2  # Bahisin yarısı kadar ekstra
+            data['para'] = max(0, data['para'] - ceza_ek)  # Ekstra düş
+            mesaj = f"💀 **ÇOK KÖTÜ!** ({zar})\nEkstra ceza: -{bahis + ceza_ek:,}💰"
+            renk = discord.Color.dark_red()
+        else:  # 3
             mesaj = f"😢 Kaybettin!\n-{bahis:,}💰"
             renk = discord.Color.red()
         
@@ -495,7 +524,7 @@ class Oyunlar(commands.Cog):
         embed = discord.Embed(title="🎲 Zar Bahis", color=renk)
         embed.description = f"**{zar_emoji} = {zar}**\n\n{mesaj}"
         embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-        embed.set_footer(text="6=5x | 5=3x | 4=1.5x | 1-3=Kayıp")
+        embed.set_footer(text="6=3x | 5=1.5x | 4=İade | 3=Kayıp | 1-2=Ekstra Ceza!")
         
         await guvenli_cevap(interaction, embed=embed)
 
@@ -515,17 +544,21 @@ class Oyunlar(commands.Cog):
         zar = random.randint(1, 6)
         
         if zar == 6:
-            odul = bahis * 5
+            odul = bahis * 3
             data['para'] += odul
             mesaj = f"🎲 **{zar}** - ALTIN 6! **+{odul:,}💰**"
         elif zar == 5:
-            odul = bahis * 3
+            odul = int(bahis * 1.5)
             data['para'] += odul
             mesaj = f"🎲 **{zar}** - Güzel! **+{odul:,}💰**"
         elif zar == 4:
-            odul = int(bahis * 1.5)
+            odul = bahis
             data['para'] += odul
-            mesaj = f"🎲 **{zar}** - İdare eder! **+{odul:,}💰**"
+            mesaj = f"🎲 **{zar}** - İade! **+{odul:,}💰**"
+        elif zar in [1, 2]:
+            ceza_ek = bahis // 2
+            data['para'] = max(0, data['para'] - ceza_ek)
+            mesaj = f"🎲 **{zar}** - ÇOK KÖTÜ! Ekstra ceza: **-{bahis + ceza_ek:,}💰**"
         else:
             mesaj = f"🎲 **{zar}** - Kaybettin! **-{bahis:,}💰**"
         
@@ -639,7 +672,7 @@ class Oyunlar(commands.Cog):
         await ctx.send(f"🎡 {emoji} **{sonuc.upper()}**\n{mesaj}\n🎒 Bakiye: **{data['para']:,}💰**")
 
     # =====================================================
-    # 🃏 BLACKJACK
+    # 🃏 BLACKJACK (REACTİON İLE)
     # =====================================================
 
     @app_commands.command(name="blackjack", description="21 kart oyunu")
@@ -702,33 +735,36 @@ class Oyunlar(commands.Cog):
         embed.add_field(name="🎴 Senin Elin", value=f"{el_goster(oyuncu)} = **{oyuncu_toplam}**", inline=False)
         embed.add_field(name="🎩 Kurpiye", value=f"`{kurpiye[0][0]}{kurpiye[0][1]}` `❓`", inline=False)
         embed.add_field(name="💰 Bahis", value=f"{bahis:,}💰", inline=True)
-        embed.set_footer(text="💬 'ç' veya 'c' = Kart Çek | 'd' = Dur (30 saniye)")
+        embed.set_footer(text="🃏 = Kart Çek | 🛑 = Dur (30 saniye)")
         
         await guvenli_cevap(interaction, embed=embed)
         
-        def check(m):
-            return (m.author.id == interaction.user.id and 
-                    m.channel.id == interaction.channel.id and 
-                    m.content.lower() in ['ç', 'd', 'c', 'cek', 'çek', 'dur'])
+        # Mesajı al ve reaction ekle
+        msg = await interaction.original_response()
+        await msg.add_reaction('🃏')
+        await msg.add_reaction('🛑')
+        
+        def check(reaction, user):
+            return (user.id == interaction.user.id and 
+                    str(reaction.emoji) in ['🃏', '🛑'] and
+                    reaction.message.id == msg.id)
         
         while True:
             try:
-                cevap = await self.bot.wait_for('message', check=check, timeout=30)
-                try:
-                    await cevap.delete()
-                except:
-                    pass
+                reaction, user = await self.bot.wait_for('reaction_add', check=check, timeout=30)
                 
-                if cevap.content.lower() in ['ç', 'c', 'cek', 'çek']:
+                if str(reaction.emoji) == '🃏':
+                    # Kart çek
                     oyuncu.append(kart_cek())
                     oyuncu_toplam = hesapla(oyuncu)
                     
                     embed = discord.Embed(title="🃏 Blackjack", color=discord.Color.blue())
                     embed.add_field(name="🎴 Senin Elin", value=f"{el_goster(oyuncu)} = **{oyuncu_toplam}**", inline=False)
                     embed.add_field(name="🎩 Kurpiye", value=f"`{kurpiye[0][0]}{kurpiye[0][1]}` `❓`", inline=False)
-                    embed.set_footer(text="💬 'ç' = Kart Çek | 'd' = Dur")
+                    embed.set_footer(text="🃏 = Kart Çek | 🛑 = Dur")
                     
-                    await interaction.edit_original_response(embed=embed)
+                    await msg.edit(embed=embed)
+                    await msg.remove_reaction(reaction, user)
                     
                     if oyuncu_toplam > 21:
                         update_economy(interaction.user.id, data)
@@ -736,12 +772,14 @@ class Oyunlar(commands.Cog):
                         embed.add_field(name="🎴 Senin Elin", value=f"{el_goster(oyuncu)} = **{oyuncu_toplam}**", inline=False)
                         embed.description = f"💥 **BATTIN!**\n-{bahis:,}💰"
                         embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-                        await interaction.edit_original_response(embed=embed)
+                        await msg.clear_reactions()
+                        await msg.edit(embed=embed)
                         return
                     
                     if oyuncu_toplam == 21:
                         break
                 else:
+                    # Dur
                     break
                     
             except asyncio.TimeoutError:
@@ -749,9 +787,11 @@ class Oyunlar(commands.Cog):
                 embed = discord.Embed(title="🃏 Blackjack", color=discord.Color.red())
                 embed.description = f"⏰ **Süre doldu!**\n-{bahis:,}💰"
                 embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-                await interaction.edit_original_response(embed=embed)
+                await msg.clear_reactions()
+                await msg.edit(embed=embed)
                 return
         
+        # Kurpiye oynuyor
         kurpiye_toplam = hesapla(kurpiye)
         while kurpiye_toplam < 17:
             kurpiye.append(kart_cek())
@@ -785,14 +825,15 @@ class Oyunlar(commands.Cog):
         embed.description = sonuc
         embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
         
-        await interaction.edit_original_response(embed=embed)
+        await msg.clear_reactions()
+        await msg.edit(embed=embed)
 
     @commands.command(aliases=['bj', '21'])
     async def blackjack(self, ctx, bahis: int):
         await ctx.send("💡 Blackjack için `/blackjack` slash komutunu kullan!")
 
     # =====================================================
-    # 🚀 CRASH
+    # 🚀 CRASH (DÜZELTİLMİŞ)
     # =====================================================
 
     @app_commands.command(name="crash", description="Çarpan yükselir, patlamadan çek!")
@@ -810,37 +851,48 @@ class Oyunlar(commands.Cog):
         
         data['para'] -= bahis
         
+        # Patlama noktası belirleme (daha dengeli)
         sans = random.randint(1, 100)
-        if sans <= 35:
-            patlama = round(random.uniform(1.1, 1.8), 2)
-        elif sans <= 65:
-            patlama = round(random.uniform(1.5, 3.0), 2)
+        if sans <= 40:
+            patlama = round(random.uniform(1.05, 1.4), 2)
+        elif sans <= 70:
+            patlama = round(random.uniform(1.35, 2.2), 2)
         elif sans <= 90:
-            patlama = round(random.uniform(2.5, 6.0), 2)
+            patlama = round(random.uniform(2.0, 4.0), 2)
+        elif sans <= 97:
+            patlama = round(random.uniform(3.5, 7.0), 2)
         else:
-            patlama = round(random.uniform(5.0, 15.0), 2)
+            patlama = round(random.uniform(6.0, 12.0), 2)
         
         carpan = 1.00
         
         embed = discord.Embed(title="🚀 Crash", color=discord.Color.green())
-        embed.description = f"📈 Çarpan: **{carpan}x**\n💰 Bahis: **{bahis:,}💰**\n💵 Potansiyel: **{int(bahis * carpan):,}💰**\n\n💬 **'ç' veya 'c' yaz** = Parayı Çek"
+        embed.description = f"📈 Çarpan: **{carpan}x**\n💰 Bahis: **{bahis:,}💰**\n💵 Potansiyel: **{int(bahis * carpan):,}💰**\n\n🚀 **Reaction ile çek:** (30sn)"
         
         await guvenli_cevap(interaction, embed=embed)
         
-        def check(m):
-            return (m.author.id == interaction.user.id and 
-                    m.channel.id == interaction.channel.id and 
-                    m.content.lower() in ['ç', 'c', 'cek', 'çek'])
+        # Mesajı al ve reaction ekle
+        msg = await interaction.original_response()
+        await msg.add_reaction('🚀')
+        
+        def check(reaction, user):
+            return (user.id == interaction.user.id and 
+                    str(reaction.emoji) == '🚀' and
+                    reaction.message.id == msg.id)
         
         cekildi = False
+        patladi = False
         
-        while carpan < patlama:
-            await asyncio.sleep(0.8)
+        while carpan < patlama and not cekildi:
+            await asyncio.sleep(0.9)
             
-            artis = random.uniform(0.1, 0.4)
+            # Çarpan artışı (daha yavaş)
+            artis = random.uniform(0.05, 0.25)
             carpan = round(carpan + artis, 2)
             
+            # Patladı mı kontrolü
             if carpan >= patlama:
+                patladi = True
                 break
             
             if carpan < 1.5:
@@ -855,25 +907,38 @@ class Oyunlar(commands.Cog):
             potansiyel = int(bahis * carpan)
             
             embed = discord.Embed(title="🚀 Crash", color=renk)
-            embed.description = f"📈 Çarpan: **{carpan}x**\n💰 Bahis: **{bahis:,}💰**\n💵 Potansiyel: **{potansiyel:,}💰**\n\n💬 **'ç' yaz** = Parayı Çek"
+            embed.description = f"📈 Çarpan: **{carpan}x**\n💰 Bahis: **{bahis:,}💰**\n💵 Potansiyel: **{potansiyel:,}💰**\n\n🚀 **Reaction ile çek!**"
             
             try:
-                await interaction.edit_original_response(embed=embed)
+                await msg.edit(embed=embed)
             except:
                 pass
             
+            # Reaction kontrolü (non-blocking)
             try:
-                cevap = await self.bot.wait_for('message', check=check, timeout=0.7)
-                try:
-                    await cevap.delete()
-                except:
-                    pass
+                reaction, user = await self.bot.wait_for('reaction_add', check=check, timeout=0.8)
                 cekildi = True
                 break
             except asyncio.TimeoutError:
                 continue
         
-        if cekildi:
+        # Sonuç
+        if patladi and not cekildi:
+            # Patladı
+            update_economy(interaction.user.id, data)
+            
+            embed = discord.Embed(title="🚀 Crash", color=discord.Color.red())
+            embed.description = f"💥 **PATLADI!** ({patlama}x'de)\n\n😢 **-{bahis:,}💰** kaybettin!"
+            embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
+            
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+            await msg.edit(embed=embed)
+            
+        elif cekildi:
+            # Çekildi
             odul = int(bahis * carpan)
             data['para'] += odul
             kar = odul - bahis
@@ -882,14 +947,13 @@ class Oyunlar(commands.Cog):
             embed = discord.Embed(title="🚀 Crash", color=discord.Color.green())
             embed.description = f"✅ **{carpan}x** çarpanında çektin!\n\n🎉 **+{kar:,}💰** kar!\nToplam: +{odul:,}💰"
             embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-        else:
-            update_economy(interaction.user.id, data)
+            embed.set_footer(text=f"Patlama noktası: {patlama}x idi")
             
-            embed = discord.Embed(title="🚀 Crash", color=discord.Color.red())
-            embed.description = f"💥 **PATLADI!** ({patlama}x)\n\n😢 **-{bahis:,}💰** kaybettin!"
-            embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-        
-        await interaction.edit_original_response(embed=embed)
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+            await msg.edit(embed=embed)
 
     @commands.command()
     async def crash(self, ctx, bahis: int):
