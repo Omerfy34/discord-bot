@@ -1,27 +1,27 @@
-# =====================================================
-# 🛠️ WOWSY BOT - YARDIMCI FONKSİYON
-# =====================================================
-
 import discord
 
-# =====================================================
-# 🛡️ GÜVENLİ CEVAP FONKSİYONU
-# =====================================================
+async def guvenli_cevap(interaction, mesaj=None, embed=None, ephemeral=False, view=None):
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(content=mesaj, embed=embed, ephemeral=ephemeral, view=view)
+        else:
+            await interaction.response.send_message(content=mesaj, embed=embed, ephemeral=ephemeral, view=view)
+    except:
+        pass
 
-async def guvenli_cevap(interaction: discord.Interaction, icerik=None, embed=None, ephemeral=False):
-    """Interaction'a güvenli şekilde cevap ver"""
+async def guvenli_defer(interaction, ephemeral=False):
     try:
         if not interaction.response.is_done():
-            if embed:
-                await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
-            elif icerik:
-                await interaction.response.send_message(icerik, ephemeral=ephemeral)
-        else:
-            if embed:
-                await interaction.followup.send(embed=embed, ephemeral=ephemeral)
-            elif icerik:
-                await interaction.followup.send(icerik, ephemeral=ephemeral)
+            await interaction.response.defer(ephemeral=ephemeral)
+            return True
+    except:
+        pass
+    return False
+
+async def guvenli_edit(interaction, mesaj=None, embed=None, view=None):
+    try:
+        await interaction.edit_original_response(content=mesaj, embed=embed, view=view)
         return True
-    except Exception as e:
-        print(f"Cevap hatası: {e}")
-        return False
+    except:
+        pass
+    return False
