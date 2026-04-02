@@ -40,6 +40,7 @@ class Yardim(commands.Cog):
                   "çek      - Bankadan çek\n"
                   "gönder   - Para transferi\n"
                   "soygun   - Hırsızlık (%25)\n"
+                  "faiz     - Faiz topla\n"
                   "zenginler- Sıralama\n"
                   "```",
             inline=True
@@ -100,6 +101,9 @@ class Yardim(commands.Cog):
                   "tokatlat- Tokat at\n"
                   "seç     - Seçim yap\n"
                   "aşkmetre- Aşk ölç\n"
+                  "kaçcm   - Boy ölç 😏\n"
+                  "gaytest - Gay testi 🏳️‍🌈\n"
+                  "iqtest  - IQ testi 🧠\n"
                   "```",
             inline=True
         )
@@ -118,19 +122,21 @@ class Yardim(commands.Cog):
         )
         
         embed.add_field(
-            name="ℹ️ BİLGİ",
+            name="ℹ️ BİLGİ & SAYAÇLAR",
             value="```\n"
                   "ping    - Bot gecikmesi\n"
                   "sunucu  - Sunucu bilgisi\n"
                   "kullanıcı- Kullanıcı bilgi\n"
                   "botbilgi- Bot hakkında\n"
                   "davet   - Davet linki\n"
+                  "yks     - YKS sayacı 📚\n"
+                  "sayaç   - Özel günler 📅\n"
                   "yardım  - Bu menü\n"
                   "```",
             inline=True
         )
         
-        embed.set_footer(text="⚡ WOWSY Bot | Geliştirici: Ömer | /ekonomi veya /oyunlar ile detay al!")
+        embed.set_footer(text="⚡ WOWSY Bot | Geliştirici: WOWSY | /ekonomi veya /oyunlar ile detay al!")
         
         if self.bot.user:
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
@@ -144,7 +150,7 @@ class Yardim(commands.Cog):
         embed.add_field(
             name="📊 Temel Komutlar",
             value="**/bakiye** `[@kullanıcı]` - Para görüntüle\n"
-                  "**/günlük** - 24 saatte bir ödül (streak bonusu)\n"
+                  "**/günlük** - 24 saatte bir ödül (streak bonusu + %10 jackpot)\n"
                   "**/bedava** - 2 saatte bir ödül\n"
                   "**/çalış** - 30 dakikada bir çalış",
             inline=False
@@ -159,9 +165,20 @@ class Yardim(commands.Cog):
         )
         
         embed.add_field(
+            name="📈 Faiz Sistemi",
+            value="**/faiz** - Birikmiş faizi topla\n"
+                  "**/faiz-bilgi** - Faiz sistemi hakkında bilgi\n"
+                  "├ 💰 Oran: %2 / 6 saat\n"
+                  "├ 📊 Bileşik faiz (faiz de faiz kazanır)\n"
+                  "└ 🔝 Max tek seferde: 50,000💰",
+            inline=False
+        )
+        
+        embed.add_field(
             name="🔫 Riskli İşlemler",
             value="**/soygun** `@kullanıcı` - %25 başarı, 1 saat cooldown\n"
-                  "Başarısız olursan 200-500💰 ceza!",
+                  "├ Başarısız olursan 200-500💰 ceza!\n"
+                  "└ Hedefin parası bankadaysa: \"Zeki!\" mesajı",
             inline=False
         )
         
@@ -171,7 +188,7 @@ class Yardim(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="💡 Yeni başlayanlar 1000💰 ile başlar!")
+        embed.set_footer(text="💡 Yeni başlayanlar 1000💰 ile başlar! Bankaya koy, faiz kazan!")
         
         await guvenli_cevap(interaction, embed=embed)
 
@@ -198,8 +215,13 @@ class Yardim(commands.Cog):
             value="**/slot** `<bahis>` - Slot makinesi\n"
                   "├ Üçlü: 10x-50x\n"
                   "└ İkili: 2x\n\n"
-                  "**/coinflip** `<bahis>` - Yazı-tura (%48)\n"
-                  "**/dice** `<bahis>` - Zar (6=5x, 5=3x, 4=1.5x)\n"
+                  "**/coinflip** `<bahis>` - Yazı-tura (%48)\n\n"
+                  "**/dice** `<bahis>` - Zar bahisi\n"
+                  "├ 6 = 3x kazanç\n"
+                  "├ 5 = 1.5x kazanç\n"
+                  "├ 4 = İade (1x)\n"
+                  "├ 3 = Kayıp\n"
+                  "└ 1-2 = Ekstra ceza! 💀\n\n"
                   "**/roulette** `<bahis> <renk>` - Rulet",
             inline=False
         )
@@ -207,10 +229,10 @@ class Yardim(commands.Cog):
         embed.add_field(
             name="🃏 Strateji Oyunları",
             value="**/blackjack** `<bahis>` - 21 kart oyunu\n"
-                  "├ 'ç' = Kart çek\n"
-                  "└ 'd' = Dur\n\n"
+                  "├ 🃏 = Kart çek\n"
+                  "└ 🛑 = Dur\n\n"
                   "**/crash** `<bahis>` - Çarpan oyunu\n"
-                  "└ 'ç' = Parayı çek",
+                  "└ 🚀 = Parayı çek (reaction)",
             inline=False
         )
         
@@ -330,6 +352,98 @@ class Yardim(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
+    @app_commands.command(name="eğlence", description="Eğlence komutlarını göster")
+    async def slash_eglence_yardim(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🎲 EĞLENCE KOMUTLARI", color=discord.Color.purple())
+        
+        embed.add_field(
+            name="🖼️ Profil",
+            value="**/avatar** `[@kullanıcı]` - Profil resmini göster",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="😂 Şaka & Sihir",
+            value="**/şaka** - Rastgele programcı şakası\n"
+                  "**/8ball** `<soru>` - Sihirli küreye sor\n"
+                  "**/seç** `<seçenek1, seçenek2, ...>` - Seçeneklerden birini seç\n"
+                  "**/şanslısayı** - 1-100 arası şanslı sayı",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💕 Sosyal",
+            value="**/sarıl** `@kullanıcı` - Birine sarıl\n"
+                  "**/tokatlat** `@kullanıcı` - Birine tokat at\n"
+                  "**/aşkmetre** `@kişi1 @kişi2` - İki kişinin aşk oranı",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="📏 Testler (18+) 😏",
+            value="**/kaçcm** `[@kullanıcı]` - Boy ölçümü 📏\n"
+                  "├ Kullanıcıya özel sabit sonuç\n"
+                  "├ 1-30 cm arası\n"
+                  "└ Eğlenceli yorumlar\n\n"
+                  "**/gaytest** `[@kullanıcı]` - Gay testi 🏳️‍🌈\n"
+                  "├ %0-100 arası oran\n"
+                  "└ Renkli grafik bar\n\n"
+                  "**/iqtest** `[@kullanıcı]` - IQ testi 🧠\n"
+                  "├ 50-200 arası IQ\n"
+                  "└ Einstein karşılaştırması",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🎲 Zar & Yazı Tura",
+            value="**/zar** - Zar at (1-6)\n"
+                  "**/yazıtura** - Yazı mı tura mı?",
+            inline=False
+        )
+        
+        embed.set_footer(text="⚠️ Test sonuçları tamamen şaka amaçlıdır!")
+        
+        await guvenli_cevap(interaction, embed=embed)
+
+    @app_commands.command(name="sayaçlar", description="YKS ve özel gün sayaçlarını göster")
+    async def slash_sayaclar_yardim(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="📅 SAYAÇ KOMUTLARI", color=discord.Color.blue())
+        
+        embed.add_field(
+            name="📚 YKS Sayacı",
+            value="**/yks** - Tüm YKS sınavlarına kalan süre\n"
+                  "**/yks TYT** - Sadece TYT'ye kalan\n"
+                  "**/yks AYT** - Sadece AYT'ye kalan\n"
+                  "**/yks YDT** - Sadece YDT'ye kalan\n\n"
+                  "📊 Gösterilen bilgiler:\n"
+                  "├ 📅 Tarih ve saat\n"
+                  "├ ⏳ Gün, saat, dakika, saniye\n"
+                  "├ 📅 Hafta bazında hesaplama\n"
+                  "├ 📊 İlerleme çubuğu\n"
+                  "└ 💬 Motivasyon mesajları",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="📅 Özel Günler Sayacı",
+            value="**/sayaç** - Yaklaşan tüm özel günler\n"
+                  "**/sayaç ramazan** - Ramazan'a kalan\n"
+                  "**/sayaç kurban** - Kurban Bayramı'na kalan\n"
+                  "**/sayaç 29 ekim** - 29 Ekim'e kalan\n"
+                  "**/sayaç yılbaşı** - Yılbaşı'na kalan\n\n"
+                  "📋 Dahil olan günler:\n"
+                  "├ 🇹🇷 Resmi tatiller (23 Nisan, 19 Mayıs...)\n"
+                  "├ 🌙 Dini bayramlar (Ramazan, Kurban)\n"
+                  "├ 💕 Özel günler (Sevgililer, Anneler günü...)\n"
+                  "├ 📝 Okul/Sınav (YKS, LGS, Karne...)\n"
+                  "└ 🎃 Eğlence (Cadılar bayramı, Black Friday...)",
+            inline=False
+        )
+        
+        embed.set_footer(text="💡 Autocomplete ile kolayca arama yapabilirsin!")
+        
+        await guvenli_cevap(interaction, embed=embed)
+
     # =====================================================
     # 📚 PREFIX KOMUTLARI
     # =====================================================
@@ -344,7 +458,7 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="💰 EKONOMİ",
-            value="`bakiye` `günlük` `bedava` `çalış` `yatır` `çek` `gönder` `soygun` `zenginler`",
+            value="`bakiye` `günlük` `bedava` `çalış` `yatır` `çek` `gönder` `soygun` `faiz` `zenginler`",
             inline=False
         )
         
@@ -368,7 +482,7 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="🎲 EĞLENCE",
-            value="`avatar` `şaka` `8ball` `sarıl` `tokatlat` `seç` `aşkmetre`",
+            value="`avatar` `şaka` `8ball` `sarıl` `tokatlat` `seç` `aşkmetre` `kaçcm` `gaytest` `iqtest`",
             inline=False
         )
         
@@ -379,12 +493,12 @@ class Yardim(commands.Cog):
         )
         
         embed.add_field(
-            name="ℹ️ BİLGİ",
-            value="`ping` `sunucu` `kullanıcı` `botbilgi` `davet` `yardım`",
+            name="ℹ️ BİLGİ & SAYAÇLAR",
+            value="`ping` `sunucu` `kullanıcı` `botbilgi` `davet` `yks` `sayaç` `yardım`",
             inline=False
         )
         
-        embed.set_footer(text="⚡ WOWSY Bot | Detay için /ekonomi, /oyunlar, /müzik")
+        embed.set_footer(text="⚡ WOWSY Bot | Detay için /ekonomi, /oyunlar, /eğlence, /sayaçlar")
         
         if self.bot.user:
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
@@ -408,7 +522,8 @@ class Yardim(commands.Cog):
             name="🏦 Banka",
             value="`!yatır <miktar>` - Yatır\n"
                   "`!çek <miktar>` - Çek\n"
-                  "`!gönder @kişi <miktar>`",
+                  "`!gönder @kişi <miktar>`\n"
+                  "`!faiz` - Faiz topla",
             inline=True
         )
         
@@ -418,6 +533,8 @@ class Yardim(commands.Cog):
                   "`!zenginler` - Top 10",
             inline=True
         )
+        
+        embed.set_footer(text="💡 Bankaya para yatır, faiz kazan!")
         
         await ctx.send(embed=embed)
 
@@ -475,6 +592,76 @@ class Yardim(commands.Cog):
                   "`!np` - Şu an çalan",
             inline=True
         )
+        
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['eğlenceyardım', 'fun'])
+    async def eglence(self, ctx):
+        embed = discord.Embed(title="🎲 EĞLENCE KOMUTLARI", color=discord.Color.purple())
+        
+        embed.add_field(
+            name="😂 Genel",
+            value="`!avatar` - Profil resmi\n"
+                  "`!şaka` - Rastgele şaka\n"
+                  "`!8ball <soru>` - Sihirli küre\n"
+                  "`!seç <a, b, c>` - Seçim yap",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="💕 Sosyal",
+            value="`!sarıl @kişi`\n"
+                  "`!tokatlat @kişi`\n"
+                  "`!aşkmetre @k1 @k2`",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📏 Testler 😏",
+            value="`!kaçcm` - Boy ölçümü\n"
+                  "`!gaytest` - Gay testi\n"
+                  "`!iqtest` - IQ testi",
+            inline=True
+        )
+        
+        embed.set_footer(text="⚠️ Test sonuçları şaka amaçlıdır!")
+        
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['sayaçyardım', 'ykssayaç'])
+    async def sayaclar(self, ctx):
+        embed = discord.Embed(title="📅 SAYAÇ KOMUTLARI", color=discord.Color.blue())
+        
+        embed.add_field(
+            name="📚 YKS",
+            value="`!yks` - TYT'ye kalan\n"
+                  "`!yks TYT` - TYT sayacı\n"
+                  "`!yks AYT` - AYT sayacı\n"
+                  "`/yks hepsi` - Tüm sınavlar",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📅 Özel Günler",
+            value="`!sayac` - Yaklaşan günler\n"
+                  "`!sayac ramazan`\n"
+                  "`!sayac kurban`\n"
+                  "`!sayac 29 ekim`\n"
+                  "`/sayaç yılbaşı`",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📋 Dahil Günler",
+            value="🇹🇷 Resmi tatiller\n"
+                  "🌙 Dini bayramlar\n"
+                  "💕 Özel günler\n"
+                  "📝 Sınavlar\n"
+                  "🎃 Eğlence",
+            inline=True
+        )
+        
+        embed.set_footer(text="💡 /sayaç yazınca autocomplete ile ara!")
         
         await ctx.send(embed=embed)
 
