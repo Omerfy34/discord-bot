@@ -274,7 +274,7 @@ class Ekonomi(commands.Cog):
         await guvenli_cevap(interaction, embed=embed)
 
     # =====================================================
-    # 🎁 GÜNLÜK (ARTTIRILMIŞ LİMİTLER)
+    # 🎁 GÜNLÜK
     # =====================================================
 
     @app_commands.command(name="günlük", description="Günlük ödülünü al (24 saatte bir)")
@@ -312,8 +312,8 @@ class Ekonomi(commands.Cog):
             data['streak'] = 1
 
         streak = min(data['streak'], 30)
-        base = random.randint(500, 1200)       # 200-500 → 500-1200
-        bonus = streak * 60                     # 25 → 60
+        base = random.randint(500, 1200)
+        bonus = streak * 60
         toplam = base + bonus
 
         # Bonus şans: %10 ihtimalle 2x
@@ -358,7 +358,7 @@ class Ekonomi(commands.Cog):
             except:
                 pass
 
-        para = random.randint(100, 350)  # 50-150 → 100-350
+        para = random.randint(100, 350)
         data['para'] += para
         data['son_bedava'] = simdi.isoformat()
         update_economy(interaction.user.id, data)
@@ -478,10 +478,10 @@ class Ekonomi(commands.Cog):
         data['para'] += miktar_int
         update_economy(interaction.user.id, data)
 
-        embed = discord.Embed(title="💵 Para Çekme", color=discord.Color.green())
+        embed = discord.Embed(title="��� Para Çekme", color=discord.Color.green())
         embed.description = f"**{miktar_int:,}💰** bankadan çekildi!"
         embed.add_field(name="💵 Cüzdan", value=f"{data['para']:,}💰", inline=True)
-        embed.add_field(name="🏦 Banka", value=f"{data['banka']:,}💰", inline=True)
+        embed.add_field(name="���� Banka", value=f"{data['banka']:,}💰", inline=True)
 
         await guvenli_cevap(interaction, embed=embed)
 
@@ -521,7 +521,7 @@ class Ekonomi(commands.Cog):
         await guvenli_cevap(interaction, embed=embed)
 
     # =====================================================
-    # 🔫 SOYGUN (AKILLI MESAJ SİSTEMİ)
+    # 🔫 SOYGUN
     # =====================================================
 
     @app_commands.command(name="soygun", description="Birini soymaya çalış (riskli!)")
@@ -552,13 +552,12 @@ class Ekonomi(commands.Cog):
 
         data['son_soygun'] = simdi.isoformat()
 
-        # ── Cüzdanda yeterli para yoksa ──
+        # Cüzdanda yeterli para yoksa
         if target_data['para'] < 200:
             update_economy(interaction.user.id, data)
             banka_parasi = target_data.get('banka', 0)
 
             if banka_parasi > 0:
-                # Parasını bankaya koymuş → zeki mesajı
                 zeki_mesajlar = [
                     f"🧠 **{member.name}** senden daha zeki! Parasını bankaya koymuş, cüzdanı bomboş!",
                     f"🏦 **{member.name}** akıllı davranmış! Tüm parasını bankada saklıyor. Soyacak bir şey yok!",
@@ -573,7 +572,6 @@ class Ekonomi(commands.Cog):
                 embed.description = mesaj
                 embed.set_footer(text="💡 Sen de paranı bankaya koy, soygunlardan koru!")
             else:
-                # Gerçekten fakir
                 embed = discord.Embed(title="💀 Fakir Hedef!", color=discord.Color.dark_grey())
                 embed.description = f"❌ **{member.name}** gerçekten çok fakir, soyacak bir şey yok!"
                 embed.add_field(name="💵 Cüzdan", value=f"{target_data['para']:,}💰", inline=True)
@@ -582,7 +580,7 @@ class Ekonomi(commands.Cog):
             await guvenli_cevap(interaction, embed=embed)
             return
 
-        # ── Soygun denemesi ──
+        # Soygun denemesi
         if random.randint(1, 100) <= 25:
             calinan = random.randint(target_data['para'] // 10, target_data['para'] // 4)
             calinan = min(calinan, 5000)
@@ -637,412 +635,6 @@ class Ekonomi(commands.Cog):
 
         embed.description = text if text else "Henüz kimse yok!"
         await guvenli_cevap(interaction, embed=embed)
-
-    # =====================================================
-    # 💰 PREFIX KOMUTLARI
-    # =====================================================
-
-    @commands.command(aliases=['bal', 'para', 'cüzdan'])
-    async def bakiye(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        data = get_economy(member.id)
-        bekleyen_faiz, _ = hesapla_faiz(data)
-
-        embed = discord.Embed(title=f"💰 {member.name}", color=discord.Color.gold())
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="💵 Cüzdan", value=f"{data['para']:,}💰", inline=True)
-        embed.add_field(name="🏦 Banka", value=f"{data.get('banka', 0):,}💰", inline=True)
-        embed.add_field(name="💎 Toplam", value=f"{data['para'] + data.get('banka', 0):,}💰", inline=True)
-
-        if bekleyen_faiz > 0:
-            embed.add_field(
-                name="📈 Bekleyen Faiz",
-                value=f"+{bekleyen_faiz:,}💰 (`!faiz` ile topla!)",
-                inline=False
-            )
-
-        embed.set_footer(text=f"🏦 Faiz: %{int(FAIZ_ORANI*100)} / {FAIZ_SURE_SAAT} saat")
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['interest', 'faizal'])
-    async def faiz(self, ctx):
-        data = get_economy(ctx.author.id)
-        banka = data.get('banka', 0)
-
-        if banka <= 0:
-            await ctx.send("❌ Bankada paran yok ki faiz işlesin! `!yatir` ile bankaya para koy.")
-            return
-
-        if not data.get('son_faiz'):
-            data['son_faiz'] = datetime.now().isoformat()
-            update_economy(ctx.author.id, data)
-            await ctx.send(f"✅ Faiz sayacın başlatıldı! {FAIZ_SURE_SAAT} saat sonra faizini topla.")
-            return
-
-        faiz_miktari, periyot = hesapla_faiz(data)
-
-        if faiz_miktari <= 0:
-            try:
-                son_faiz = datetime.fromisoformat(data['son_faiz'])
-                gecen = datetime.now() - son_faiz
-                kalan = timedelta(hours=FAIZ_SURE_SAAT) - gecen
-                if kalan.total_seconds() > 0:
-                    dk = int(kalan.total_seconds() // 60)
-                    await ctx.send(f"⏰ Henüz faiz birikmedi! **{dk} dakika** bekle.")
-                else:
-                    await ctx.send("⏰ Henüz faiz birikmedi! Biraz bekle.")
-            except:
-                await ctx.send("⏰ Henüz faiz birikmedi! Biraz bekle.")
-            return
-
-        data['banka'] += faiz_miktari
-        data['son_faiz'] = datetime.now().isoformat()
-        data['toplam_faiz_kazanc'] = data.get('toplam_faiz_kazanc', 0) + faiz_miktari
-        update_economy(ctx.author.id, data)
-
-        embed = discord.Embed(title="📈 Faiz Toplandı!", color=discord.Color.green())
-        embed.description = f"**+{faiz_miktari:,}💰** faiz kazandın!"
-        embed.add_field(name="⏱️ Periyot", value=f"{periyot}x ({periyot * FAIZ_SURE_SAAT} saat)", inline=True)
-        embed.add_field(name="🏦 Yeni Banka", value=f"{data['banka']:,}💰", inline=True)
-        embed.add_field(name="📊 Toplam Faiz Kazancın", value=f"{data.get('toplam_faiz_kazanc', 0):,}💰", inline=False)
-
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['daily', 'günlük'])
-    async def gunluk(self, ctx):
-        data = get_economy(ctx.author.id)
-        simdi = datetime.now()
-
-        if 'son_gunluk' in data and data['son_gunluk']:
-            try:
-                son = datetime.fromisoformat(data['son_gunluk'])
-                if simdi - son < timedelta(hours=24):
-                    kalan = timedelta(hours=24) - (simdi - son)
-                    saat = int(kalan.total_seconds() // 3600)
-                    dk = int((kalan.total_seconds() % 3600) // 60)
-                    await ctx.send(f"⏰ Bekle! **{saat}s {dk}dk** kaldı.")
-                    return
-            except:
-                pass
-
-        if 'streak' not in data:
-            data['streak'] = 0
-
-        if 'son_gunluk' in data and data['son_gunluk']:
-            try:
-                son = datetime.fromisoformat(data['son_gunluk'])
-                if simdi - son < timedelta(hours=48):
-                    data['streak'] += 1
-                else:
-                    data['streak'] = 1
-            except:
-                data['streak'] = 1
-        else:
-            data['streak'] = 1
-
-        streak = min(data['streak'], 30)
-        base = random.randint(500, 1200)
-        bonus = streak * 60
-        toplam = base + bonus
-
-        jackpot = False
-        if random.randint(1, 100) <= 10:
-            toplam *= 2
-            jackpot = True
-
-        data['para'] += toplam
-        data['son_gunluk'] = simdi.isoformat()
-        update_economy(ctx.author.id, data)
-
-        embed = discord.Embed(
-            title="🎁 Günlük Ödül" + (" 🎰 JACKPOT!" if jackpot else ""),
-            color=discord.Color.gold() if not jackpot else discord.Color.purple()
-        )
-        embed.add_field(name="💰 Temel", value=f"+{base}💰", inline=True)
-        embed.add_field(name="🔥 Streak", value=f"+{bonus}💰 ({streak} gün)", inline=True)
-        if jackpot:
-            embed.add_field(name="🎰 JACKPOT!", value="**2X KAZANÇ!**", inline=True)
-        embed.add_field(name="💎 Toplam", value=f"+{toplam}💰", inline=False)
-
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['free'])
-    async def bedava(self, ctx):
-        data = get_economy(ctx.author.id)
-        simdi = datetime.now()
-
-        if 'son_bedava' in data and data['son_bedava']:
-            try:
-                son = datetime.fromisoformat(data['son_bedava'])
-                if simdi - son < timedelta(hours=2):
-                    kalan = timedelta(hours=2) - (simdi - son)
-                    dk = int(kalan.total_seconds() // 60)
-                    await ctx.send(f"⏰ Bekle! **{dk} dakika** kaldı.")
-                    return
-            except:
-                pass
-
-        para = random.randint(100, 350)
-        data['para'] += para
-        data['son_bedava'] = simdi.isoformat()
-        update_economy(ctx.author.id, data)
-
-        await ctx.send(f"💸 Bedava: **+{para}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
-
-    @commands.command(aliases=['work', 'iş'])
-    async def calis(self, ctx):
-        data = get_economy(ctx.author.id)
-        simdi = datetime.now()
-
-        if 'son_calis' in data and data['son_calis']:
-            try:
-                son = datetime.fromisoformat(data['son_calis'])
-                if simdi - son < timedelta(minutes=30):
-                    kalan = timedelta(minutes=30) - (simdi - son)
-                    dk = int(kalan.total_seconds() // 60)
-                    await ctx.send(f"⏰ Dinleniyorsun! **{dk} dakika** bekle.")
-                    return
-            except:
-                pass
-
-        isler = [
-            ("💻 Yazılım geliştirdin", 250, 500),
-            ("🍕 Pizza dağıttın", 100, 250),
-            ("🚗 Uber şoförlüğü yaptın", 150, 300),
-            ("📦 Kargo taşıdın", 120, 280),
-            ("🎨 Grafik tasarım yaptın", 200, 400),
-            ("📱 Uygulama yaptın", 300, 550),
-            ("🎵 Müzik prodüksiyonu yaptın", 180, 380),
-            ("📸 Fotoğraf çekimi yaptın", 160, 320),
-            ("✍️ Makale yazdın", 130, 260),
-        ]
-
-        is_secim = random.choice(isler)
-        kazanc = random.randint(is_secim[1], is_secim[2])
-        data['para'] += kazanc
-        data['son_calis'] = simdi.isoformat()
-        update_economy(ctx.author.id, data)
-
-        await ctx.send(f"{is_secim[0]} ve **+{kazanc}💰** kazandın!\n🎒 Bakiye: **{data['para']:,}💰**")
-
-    @commands.command(aliases=['deposit'])
-    async def yatir(self, ctx, miktar: str):
-        data = get_economy(ctx.author.id)
-
-        if miktar.lower() in ['hepsi', 'all', 'tümü']:
-            miktar_int = data['para']
-        else:
-            try:
-                miktar_int = int(miktar)
-            except:
-                await ctx.send("❌ Geçerli bir miktar gir!")
-                return
-
-        if miktar_int <= 0 or data['para'] < miktar_int:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-
-        data['para'] -= miktar_int
-        data['banka'] = data.get('banka', 0) + miktar_int
-
-        if not data.get('son_faiz'):
-            data['son_faiz'] = datetime.now().isoformat()
-
-        update_economy(ctx.author.id, data)
-
-        await ctx.send(f"🏦 **{miktar_int:,}💰** bankaya yatırıldı! 📈 Faiz işlemeye başladı.")
-
-    @commands.command(aliases=['withdraw'])
-    async def cek(self, ctx, miktar: str):
-        data = get_economy(ctx.author.id)
-        banka = data.get('banka', 0)
-
-        if miktar.lower() in ['hepsi', 'all', 'tümü']:
-            miktar_int = banka
-        else:
-            try:
-                miktar_int = int(miktar)
-            except:
-                await ctx.send("❌ Geçerli bir miktar gir!")
-                return
-
-        if miktar_int <= 0 or banka < miktar_int:
-            await ctx.send("❌ Bankada yeterli para yok!")
-            return
-
-        data['banka'] -= miktar_int
-        data['para'] += miktar_int
-        update_economy(ctx.author.id, data)
-
-        await ctx.send(f"💵 **{miktar_int:,}💰** bankadan çekildi!")
-
-    @commands.command(aliases=['give', 'ver', 'transfer'])
-    async def gonder(self, ctx, member: discord.Member, miktar: int):
-        if member.bot or member == ctx.author:
-            await ctx.send("❌ Geçersiz!")
-            return
-
-        data = get_economy(ctx.author.id)
-
-        if miktar < 1 or data['para'] < miktar:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-
-        data['para'] -= miktar
-        update_economy(ctx.author.id, data)
-
-        target_data = get_economy(member.id)
-        target_data['para'] += miktar
-        update_economy(member.id, target_data)
-
-        await ctx.send(f"💸 {ctx.author.mention} → {member.mention}: **{miktar:,}💰**")
-
-    @commands.command(aliases=['rob', 'soy'])
-    async def soygun(self, ctx, member: discord.Member):
-        if member.bot or member == ctx.author:
-            await ctx.send("❌ Geçersiz hedef!")
-            return
-
-        data = get_economy(ctx.author.id)
-        target_data = get_economy(member.id)
-        simdi = datetime.now()
-
-        if 'son_soygun' in data and data['son_soygun']:
-            try:
-                son = datetime.fromisoformat(data['son_soygun'])
-                if simdi - son < timedelta(hours=1):
-                    kalan = timedelta(hours=1) - (simdi - son)
-                    dk = int(kalan.total_seconds() // 60)
-                    await ctx.send(f"🚔 Polisler arıyor! **{dk} dakika** bekle.")
-                    return
-            except:
-                pass
-
-        data['son_soygun'] = simdi.isoformat()
-
-        if target_data['para'] < 200:
-            update_economy(ctx.author.id, data)
-            banka_parasi = target_data.get('banka', 0)
-
-            if banka_parasi > 0:
-                zeki_mesajlar = [
-                    f"🧠 **{member.name}** senden zeki! Parasını bankaya koymuş!",
-                    f"🏦 **{member.name}** akıllıymış! Bankada **{banka_parasi:,}💰** var ama dokunamazsın!",
-                    f"🦊 **{member.name}** tilki gibi kurnaz! Cüzdanı boş, banka dolu!",
-                    f"🎓 **{member.name}** finans dersi veriyor sana! Paranı bankaya koy!",
-                    f"💡 **{member.name}** akıllı davranmış! {banka_parasi:,}💰 bankada güvende.",
-                ]
-                await ctx.send(random.choice(zeki_mesajlar))
-            else:
-                await ctx.send(f"❌ {member.mention} gerçekten çok fakir, soyacak bir şey yok!")
-            return
-
-        if random.randint(1, 100) <= 25:
-            calinan = random.randint(target_data['para'] // 10, target_data['para'] // 4)
-            calinan = min(calinan, 5000)
-
-            target_data['para'] -= calinan
-            data['para'] += calinan
-
-            update_economy(ctx.author.id, data)
-            update_economy(member.id, target_data)
-
-            await ctx.send(f"🔫 Soygun başarılı! {member.mention}'den **{calinan:,}💰** çaldın!")
-        else:
-            ceza = random.randint(200, 500)
-            ceza = min(ceza, data['para'])
-            data['para'] -= ceza
-            update_economy(ctx.author.id, data)
-
-            await ctx.send(f"🚔 Yakalandın! **{ceza:,}💰** ceza ödedin!")
-
-    @commands.command(aliases=['lb', 'top', 'leaderboard'])
-    async def zenginler(self, ctx):
-        all_data = get_all_economy()
-
-        if not all_data:
-            await ctx.send("📊 Henüz veri yok!")
-            return
-
-        siralama = sorted(
-            all_data.items(),
-            key=lambda x: x[1].get('para', 0) + x[1].get('banka', 0),
-            reverse=True
-        )[:10]
-
-        embed = discord.Embed(title="💎 En Zenginler", color=discord.Color.gold())
-        emojiler = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-
-        text = ""
-        for i, (user_id, user_data) in enumerate(siralama):
-            user = self.bot.get_user(int(user_id))
-            toplam = user_data.get('para', 0) + user_data.get('banka', 0)
-            if user:
-                text += f"{emojiler[i]} **{user.name}** - {toplam:,}💰\n"
-
-        embed.description = text if text else "Henüz kimse yok!"
-        await ctx.send(embed=embed)
-
-    # =====================================================
-    # 👑 PATRON KOMUTLARI
-    # =====================================================
-
-    @commands.command()
-    async def hediye(self, ctx, member: discord.Member, miktar: int):
-        if ctx.author.id != PATRON_ID:
-            await ctx.send("❌ Bu komutu sadece patron kullanabilir!")
-            return
-
-        data = get_economy(member.id)
-        data['para'] += miktar
-        update_economy(member.id, data)
-
-        await ctx.send(f"✅ {member.mention} hesabına **{miktar:,}💰** yüklendi!\n🎒 Yeni bakiye: **{data['para']:,}💰**")
-
-    @commands.command()
-    async def paraal(self, ctx, member: discord.Member, miktar: int):
-        if ctx.author.id != PATRON_ID:
-            await ctx.send("❌ Bu komutu sadece patron kullanabilir!")
-            return
-
-        data = get_economy(member.id)
-        data['para'] = max(0, data['para'] - miktar)
-        update_economy(member.id, data)
-
-        await ctx.send(f"✅ {member.mention} hesabından **{miktar:,}💰** alındı!\n🎒 Yeni bakiye: **{data['para']:,}💰**")
-
-    @commands.command()
-    async def resetpara(self, ctx, member: discord.Member):
-        if ctx.author.id != PATRON_ID:
-            await ctx.send("❌ Bu komutu sadece patron kullanabilir!")
-            return
-
-        data = {'para': 1000, 'banka': 0}
-        update_economy(member.id, data)
-
-        await ctx.send(f"✅ {member.mention} bakiyesi sıfırlandı! (1000💰)")
-
-    # =====================================================
-    # 👑 PATRON: FAİZ ORANI AYARLA
-    # =====================================================
-
-    @commands.command()
-    async def faizorani(self, ctx, oran: float = None):
-        if ctx.author.id != PATRON_ID:
-            await ctx.send("❌ Bu komutu sadece patron kullanabilir!")
-            return
-
-        global FAIZ_ORANI
-        if oran is None:
-            await ctx.send(f"📊 Mevcut faiz oranı: **%{FAIZ_ORANI*100:.1f}** / {FAIZ_SURE_SAAT} saat")
-            return
-
-        if oran < 0 or oran > 50:
-            await ctx.send("❌ Oran %0 ile %50 arasında olmalı!")
-            return
-
-        FAIZ_ORANI = oran / 100
-        await ctx.send(f"✅ Faiz oranı **%{oran:.1f}** olarak ayarlandı!")
 
 # =====================================================
 # 🔧 COG YÜKLEME
