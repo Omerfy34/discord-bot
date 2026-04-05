@@ -23,12 +23,76 @@ CM_MESAJLARI = {
 }
 
 # =====================================================
+# 🎬 AYKUT ELMAS GİFLERİ
+# =====================================================
+
+AYKUT_GIFLERI = [
+    "https://i.giphy.com/LP5mFYheN3LvvKitCg.webp",
+    "https://i.giphy.com/ehJkGIbzZweZ1xLIv4.webp",
+    "https://i.giphy.com/ywOUuElTReuC8KOkch.webp",
+    "https://i.giphy.com/M9NCZvijqfpvR5rN8X.webp",
+    "https://i.giphy.com/gEvaCNjmpOzFn4Mv3J.webp",
+    "https://i.giphy.com/MedBaibOvjyvNJ7348.webp",
+    "https://i.giphy.com/lXnJcG9RXd4VnOsmOc.webp",
+    "https://i.giphy.com/gL6hM98t5IE9hlBMk3.webp",
+    "https://i.giphy.com/hCP3WCCrUNrqFoh2P2.webp",
+    "https://i.giphy.com/XBM5JUti4fKMFjl61s.webp",
+    "https://i.giphy.com/rHyDUINi319zxh9Rno.webp",
+    "https://i.giphy.com/KBaRZ33N8VtbKglqPq.webp",
+    "https://i.giphy.com/g0mXEGsBplomB5rokQ.webp",
+    "https://i.giphy.com/RFvqmJh3wsRs7Soals.webp",
+    "https://i.giphy.com/Io4ARGU5VtQg7AOini.webp",
+    "https://i.giphy.com/pVEjqboNxNT7R2BDqo.webp",
+    "https://i.giphy.com/7SzlxJQREzXeLOXXsB.webp",
+    "https://i.giphy.com/T0PBpSbn7ZbEemPOXP.webp",
+    "https://i.giphy.com/pdKSnaZrKEbddkh0mz.webp",
+    "https://media.tenor.com/3TvCNHdZtK8AAAAi/shocked-funny.gif",
+    "https://media.tenor.com/3JCjONF8KA4AAAAm/aykut-elmas.webp",
+    "https://media.tenor.com/Wlz1OVCItDUAAAAM/aykut-elmas-dans.gif",
+    "https://media.tenor.com/hfNJdB1b6MMAAAAM/aykut-elmas-aykut.gif",
+    "https://media.tenor.com/zsI4q8qBCZwAAAAM/nasip-nasipte.gif",
+    "https://media.tenor.com/oq7FdtsNN-0AAAAM/ak%C5%9Fam%C4%B1n%C4%B1z-hayrolsun-ak%C5%9Fam%C4%B1n%C4%B1z-hay%C4%B1rl%C4%B1olsun.gif",
+    "https://media.tenor.com/UkeGhiDZkIEAAAAM/aykut-elmas.gif",
+    "https://media.tenor.com/Qc3S_F9bzR8AAAAM/aykut-elmas-halil-ibrahim-g%C3%B6ker.gif",
+    "https://media.tenor.com/FezIGiO8smkAAAAM/aykut-elmas-sa%C3%A7%C4%B1n%C4%B1-d%C3%BCzeltiyor.gif",
+    "https://media.tenor.com/d1IU4KpeNPkAAAAM/aykut-elmas-k%C4%B1z%C4%B1n%C4%B1z-galiba.gif",
+    "https://media.tenor.com/DsrDgR8wUCAAAAAM/aykut-elmas-dans-ediyor-aykut-elmas.gif",
+    "https://media.tenor.com/NiDJhO8HzSYAAAAM/aykut-elmas-dans.gif",
+    "https://media.tenor.com/xL7i9zVBrssAAAAM/aykut-elmas-k%C3%BCf%C3%BCr-etme.gif",
+    "https://media.tenor.com/wpSjgGPiG2wAAAAM/aykut-elmas-bir-sorsana-neden-i%C3%A7iyorum.gif",
+    "https://media.tenor.com/TdJ1eVfEnf0AAAAM/aykut-elmas-hade-g%C3%B6rm%C3%BCyom-hade.gif",
+    "https://media.tenor.com/B4SgpzHJC7IAAAAM/aykut-elmas.gif",
+    "https://media.tenor.com/nl5t2MjpG5oAAAAM/aykut-elmas-y%C4%B1lba%C5%9F%C4%B1-aykut-elmas.gif",
+    "https://media.tenor.com/YHFsqP1KpS8AAAAM/projery-projery03.gif",
+    "https://media.tenor.com/ivljTxbDxu0AAAAM/okundu-aykut-elmas.gif",
+    "https://media.tenor.com/bNCvZnTNHHsAAAAM/aykut-elmas-durkut.gif",
+    "https://media.tenor.com/eaCL6E8SFxYAAAAM/aykut-elmas-para.gif",
+    "https://media.tenor.com/2Oke6HoFVhUAAAAM/aykut-elmas.gif",
+    "https://media.tenor.com/RKXOy9flSh0AAAAM/aykut-elmas-leblebi.gif",
+    "https://media.tenor.com/oJwYvYSVrL8AAAAM/sen-%C5%9Fimdi-gen%C3%A7sin-aykut-elmas.gif",
+]
+
+# =====================================================
 # 🎲 EĞLENCE COG
 # =====================================================
 
 class Eglence(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # =====================================================
+    # 🎬 AYKUT ELMAS
+    # =====================================================
+
+    @app_commands.command(name="aykut", description="Rastgele Aykut Elmas GIF'i gönder 🎬")
+    async def slash_aykut(self, interaction: discord.Interaction):
+        gif = random.choice(AYKUT_GIFLERI)
+        
+        embed = discord.Embed(title="🎬 Aykut Elmas", color=discord.Color.red())
+        embed.set_image(url=gif)
+        embed.set_footer(text=f"rastgele seçildi • {interaction.user.name}")
+        
+        await guvenli_cevap(interaction, embed=embed)
 
     # =====================================================
     # 🎲 SLASH KOMUTLARI
@@ -82,7 +146,7 @@ class Eglence(commands.Cog):
             "Kodum çalışıyor: 'Ben bir dahiyim.' Kodum çalışmıyor: 'Ben bir salağım.' Döngü devam ediyor. 🔄",
             "Yazılımcı: 'Bende çalışıyor.' Müşteri: 'Biz senin bilgisayarını mı satın alıyoruz?' 💻",
             "Bir yazılımcı için 'yakında' kelimesi 2 saat ile 6 ay arasını temsil eder. ⏳",
-            "StackOverflow kapansa dünya ekonomisi 15 dakikada çöker. 📉"
+            "StackOverflow kapansa dünya ekonomisi 15 dakikada çöker. 📉",
             "Geçen gün bir fırıncıya gittim, 'Ekmek taze mi?' dedim. 'Yok, yarının ekmeği' dedi. Geleceği yedik iyi mi? 🥖",
             "Adamın biri varmış, ikinci gün ölmüş. Neden? Çünkü ilk gün çok yorulmuş! 🤦‍♂️",
             "Sinemada önümdeki adam keldi, kafasına şaplak attım 'Naber lan Rıfat' dedim. 'Rıfat değilim' dedi. 'Vay be Rıfat, hem kel olmuşsun hem de ismini değiştirmişsin' dedim. 😂",
@@ -105,7 +169,6 @@ class Eglence(commands.Cog):
             "Soru: Limon ne zaman sıkılır? Cevap: Yalnız kaldığında! 🍋",
             "Adamın biri gömleğini ütülüyormuş, telefon çalmış. Ütüyü kulağına götürmüş! Diğer kulağı neden yanmış? Çünkü ambulansı aramaya çalışmış! 📞",
             "Soru: Adamın biri Hindistan'da yürüyormuş, kafasına 'budha' düşmüş. Ne demiş? Cevap: 'Başımıza budha mı gelecekti?' 🧘‍♂️",
-            "Soru: Hangi teneşirle yazı yazılmaz? Cevap: Müşteri memnuniyetsizliği yaşayan cenaze teneşiriyle! (Tamam, bu biraz karanlık oldu) ⚰️",
             "Öğretmen: 'Cümle içinde 'ayak' kelimesini kullan.' Öğrenci: 'Annem mutfakta ayak-üstü yemek yiyor.' 🦶",
             "Soru: Mantarlar neden şemsiye şeklindedir? Cevap: Yağmurda ıslanmamak için! 🍄",
             "Adamın biri restorana gitmiş, 'Bana bir yer ayırın' demiş. Garson da 'Buyurun, şurası ayır' demiş. 🍽️",
@@ -316,40 +379,6 @@ class Eglence(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['cm', 'dick', 'size', 'boy', 'pipi'])
-    async def kaccm(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        
-        random.seed(member.id)
-        cm = random.randint(1, 30)
-        random.seed()
-        
-        mesaj = "???"
-        for (min_cm, max_cm), mesajlar in CM_MESAJLARI.items():
-            if min_cm <= cm < max_cm:
-                mesaj = random.choice(mesajlar)
-                break
-        
-        bar = "=" * (cm // 3) + "D" if cm > 0 else "."
-        
-        if cm < 10:
-            renk = discord.Color.red()
-        elif cm < 15:
-            renk = discord.Color.orange()
-        elif cm < 20:
-            renk = discord.Color.green()
-        else:
-            renk = discord.Color.gold()
-        
-        embed = discord.Embed(title=f"📏 {member.name}", color=renk)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.description = f"```\n8{bar}\n```"
-        embed.add_field(name="📊 Sonuç", value=f"**{cm} cm**", inline=True)
-        embed.add_field(name="💬 Yorum", value=mesaj, inline=True)
-        embed.set_footer(text="⚠️ Şaka amaçlıdır!")
-        
-        await ctx.send(embed=embed)
-
     # =====================================================
     # 🏳️‍🌈 GAY TEST
     # =====================================================
@@ -405,38 +434,6 @@ class Eglence(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['gay', 'gaylik', 'lgbttest'])
-    async def gaytest(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        
-        random.seed(member.id + 1337)
-        oran = random.randint(0, 100)
-        random.seed()
-        
-        if oran < 20:
-            mesaj = "Düz 📏"
-        elif oran < 40:
-            mesaj = "Biraz merak var 🤔"
-        elif oran < 60:
-            mesaj = "Bi-curious 👀"
-        elif oran < 80:
-            mesaj = "Rainbow vibes 🌈"
-        else:
-            mesaj = "FULL GAY! 🏳️‍🌈"
-        
-        bar_dolu = oran // 10
-        bar = "🏳️‍🌈" * bar_dolu + "⬜" * (10 - bar_dolu)
-        
-        embed = discord.Embed(title="🏳️‍🌈 Gay Test", color=discord.Color.from_rgb(255, 105, 180))
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="👤 Kullanıcı", value=member.mention, inline=True)
-        embed.add_field(name="📊 Oran", value=f"**%{oran}**", inline=True)
-        embed.add_field(name="💬 Sonuç", value=mesaj, inline=False)
-        embed.add_field(name="📈 Grafik", value=bar, inline=False)
-        embed.set_footer(text="⚠️ Şaka amaçlıdır!")
-        
-        await ctx.send(embed=embed)
-
     # =====================================================
     # 🧠 IQ TEST
     # =====================================================
@@ -480,192 +477,6 @@ class Eglence(commands.Cog):
         embed.set_footer(text="⚠️ Şaka amaçlıdır, gerçek IQ testine benzemez!")
         
         await guvenli_cevap(interaction, embed=embed)
-
-    @commands.command(aliases=['iq', 'zeka'])
-    async def iqtest(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        
-        random.seed(member.id + 9999)
-        iq = random.randint(50, 200)
-        random.seed()
-        
-        if iq >= 150:
-            mesaj = "🧠 DAHİ!"
-        elif iq >= 120:
-            mesaj = "📚 Çok zeki!"
-        elif iq >= 100:
-            mesaj = "👍 Normal"
-        elif iq >= 80:
-            mesaj = "😅 Eh işte..."
-        else:
-            mesaj = "🤡 Bruh"
-        
-        embed = discord.Embed(title="🧠 IQ Test", color=discord.Color.blue())
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="👤 Kullanıcı", value=member.mention, inline=True)
-        embed.add_field(name="🧠 IQ", value=f"**{iq}**", inline=True)
-        embed.add_field(name="💬 Sonuç", value=mesaj, inline=False)
-        embed.set_footer(text="⚠️ Şaka amaçlıdır!")
-        
-        await ctx.send(embed=embed)
-
-    # =====================================================
-    # 🎲 PREFIX KOMUTLARI
-    # =====================================================
-
-    @commands.command(aliases=['pfp', 'pp', 'profil'])
-    async def avatar(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        
-        embed = discord.Embed(title=f"🖼️ {member.name}", color=member.color)
-        embed.set_image(url=member.display_avatar.url)
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['joke', 'espri'])
-    async def saka(self, ctx):
-        sakalar = [
-            "Neden senior yazılımcılar ormanda yürümeyi sever? Çünkü orada hiç 'merge conflict' yok, sadece doğal dallar (branches) var. 🌲",
-            "CSS dosyası neden terapiye gider? Çünkü parent'ı ile olan ilişkisi çok karmaşık ve sürekli overflow yaşıyor. 🎨",
-            "Docker neden çok havalı? Çünkü 'Benim makinemde çalışıyordu' bahanesini yasal hale getirdi. 🐋",
-            "Bir yazılımcı neden asla evlenemez? Çünkü her şeyi Localhost'ta çalışıyor sanıyor. 🏠",
-            "Junior: 'Kodu yazdım ama neden çalışmıyor bilmiyorum.' Senior: 'Kodu yazdım ve neden çalışıyor hiçbir fikrim yok.' 🧙‍♂️",
-            "Git ve Evlilik arasındaki benzerlik nedir? İkisinde de bir hata yaptığında commit etmekten korkarsın. 💍",
-            "Yapay zeka işimizi elimizden mi alacak? Hayır, müşteriler ne istediğini anlatamadığı sürece güvendeyiz. 🤖",
-            "Bir SQL sorgusu bara girmiş, iki tabloya yaklaşmış ve sormuş: 'Join edebilir miyiz?' 🍺",
-            "Python neden yılan gibi? Çünkü indent'siz yaşayamaz! 🐍",
-            "Neden yazılımcılar karanlıkta çalışır? Çünkü light mode gözlerini yakıyor! 🌙",
-            "İnternet neden üzgün? Çünkü çok fazla spam yiyor! 📧",
-            "JavaScript neden terapiye gitti? Çünkü çok fazla callback var! 🔄",
-            "HTML neden partiye gitmedi? Çünkü tag'lenmeyi sevmiyor! 🎉",
-            "Programcı neden karısını terk etti? Çünkü obje odaklı değildi! 💔",
-            "Recursive fonksiyon bara girmiş. Barmen: 'Ne içersin?' Fonksiyon: 'Recursive fonksiyon bara girmiş...' 🔁",
-            "Yazılımcı duşta neden öldü? Şampuan kutusunda: 'Islat, şampuanla, durula, tekrarla' yazıyordu. Sonsuz döngüye girdi. 🧼",
-            "Donanım (Hardware), yazılıma vuramadığın zaman tekmelediğin kısımdır. 💻",
-            "Gerçek programcılar ağlamaz, sadece debug moduna geçerler. 😢",
-            "Bir yazılımcının 0'dan 10'a kadar sayması ne kadar sürer? 11 saniye, çünkü 0'dan başlar. 🔢",
-            "Linux kullanıcısı neden yoldan çıktı? 'Drive' bulunamadı hatası aldığı için. 🐧",
-            "C++ geliştiricileri neden gözlük takar? Çünkü referansları göremiyorlar. 👓",
-            "Java geliştiricileri neden her şeyi çok karmaşık anlatır? Çünkü her şey bir 'AbstractMethodBeanFactory'dir. ☕",
-            "Backend geliştiricisi plaja giderse ne der? 'Görüntü kötü ama API çok hızlı çalışıyor.' 🌊",
-            "Yazılımcıların en sevdiği spor nedir? Bug avcılığı. 🏹",
-            "Neden 1 bit bilgisayara girmiş? Byte almak için! 😂",
-            "Programcı neden gözlük takar? Çünkü C# (C-Sharp) yapamıyor! 👓",
-            "Bir test uzmanı (QA) bara girer; koşarak girer, takla atarak girer, 99999 tane bira ister, kertenkele ısmarlar... 🍺",
-            "Frontend'ci neden mutsuz? Tasarımcı 'pixel perfect' istediği için. 📐",
-            "Microservice mimarisi nedir? Bir hatayı 20 farklı sunucuya dağıtma sanatıdır. ☁️",
-            "Neden Node.js geliştiricileri kahve sevmez? Zaten sürekli event loop içindeler. ☕",
-            "Klavye neden doktora gitti? Çünkü tuşları basıyordu! ⌨️",
-            "Kodum çalışıyor: 'Ben bir dahiyim.' Kodum çalışmıyor: 'Ben bir salağım.' Döngü devam ediyor. 🔄",
-            "Yazılımcı: 'Bende çalışıyor.' Müşteri: 'Biz senin bilgisayarını mı satın alıyoruz?' 💻",
-            "Bir yazılımcı için 'yakında' kelimesi 2 saat ile 6 ay arasını temsil eder. ⏳",
-            "StackOverflow kapansa dünya ekonomisi 15 dakikada çöker. 📉"
-            "Geçen gün bir fırıncıya gittim, 'Ekmek taze mi?' dedim. 'Yok, yarının ekmeği' dedi. Geleceği yedik iyi mi? 🥖",
-            "Adamın biri varmış, ikinci gün ölmüş. Neden? Çünkü ilk gün çok yorulmuş! 🤦‍♂️",
-            "Sinemada önümdeki adam keldi, kafasına şaplak attım 'Naber lan Rıfat' dedim. 'Rıfat değilim' dedi. 'Vay be Rıfat, hem kel olmuşsun hem de ismini değiştirmişsin' dedim. 😂",
-            "Soru: Havlayan saatlere ne denir? Cevap: Watch-dog! 🐶⌚",
-            "Yağmur yağmış, yerler ıslanmış. Peki ya gökler? Gökler ağlamış... 🌧️",
-            "Doktor: 'Beyefendi, günde bir elma yerseniz doktordan uzak durursunuz.' Hasta: 'E ama ben size geldim?' Doktor: 'Ben elma değilim ki!' 🍎",
-            "Adamın biri kitap okurken ölmüş. Neden? Satır başına gelmiş! 📚",
-            "Soru: Temel neden her sabah evden çıkarken kapıya bakarmış? Cevap: Eşik atlamak için! 🏠",
-            "Garson: 'Beyefendi, çorbanızda sinek var!' Müşteri: 'Bağırma, şimdi herkes ister!' 🥣",
-            "Soru: En çok kar yağan ilimiz hangisidir? Cevap: Kar-aman! ❄️",
-            "Oğlum: 'Baba, evlenmek ne kadar tutar?' Baba: 'Bilmiyorum oğlum, ben hâlâ ödüyorum.' 💍",
-            "Soru: İki domates yolda yürüyormuş, birinin üzerinden araba geçmiş. Diğeri ne demiş? Cevap: 'Yürü gidelim salça!' 🍅",
-            "Adamın biri kazmış, karısı da tencereymiş... Neyse bu çok soğuk oldu. 🧊",
-            "Soru: En hızlı sayı hangisidir? Cevap: 10. Çünkü onun 'on'u (önü) açık! 🔟",
-            "Dün bir şaka yaptım, herkes güldü. Bugün yaptım, kimse gülmedi. Meğer şakanın son kullanma tarihi geçmiş. 🗓️",
-            "Soru: Kalemi olan adama ne denir? Cevap: Kalem-şör! 🖋️",
-            "Adamın kafasına radyo düşmüş, bir şey olmamış. Neden? Çünkü radyo hafif müzik çalıyormuş! 🎶",
-            "Soru: Hangi masada yemek yenmez? Cevap: Ders masasında! 📝",
-            "Küçük bir çocuk annesine sormuş: 'Anne, melekler uçar mı?' Anne: 'Evet yavrum.' Çocuk: 'Ama bizim hizmetçi uçmuyor?' Anne: 'O melek değil ki.' Çocuk: 'Ama babam ona meleğim diyor?' Anne: 'O zaman şimdi uçacak!' 👼",
-            "Soru: Limon ne zaman sıkılır? Cevap: Yalnız kaldığında! 🍋",
-            "Adamın biri gömleğini ütülüyormuş, telefon çalmış. Ütüyü kulağına götürmüş! Diğer kulağı neden yanmış? Çünkü ambulansı aramaya çalışmış! 📞",
-            "Soru: Adamın biri Hindistan'da yürüyormuş, kafasına 'budha' düşmüş. Ne demiş? Cevap: 'Başımıza budha mı gelecekti?' 🧘‍♂️",
-            "Soru: Hangi teneşirle yazı yazılmaz? Cevap: Müşteri memnuniyetsizliği yaşayan cenaze teneşiriyle! (Tamam, bu biraz karanlık oldu) ⚰️",
-            "Öğretmen: 'Cümle içinde 'ayak' kelimesini kullan.' Öğrenci: 'Annem mutfakta ayak-üstü yemek yiyor.' 🦶",
-            "Soru: Mantarlar neden şemsiye şeklindedir? Cevap: Yağmurda ıslanmamak için! 🍄",
-            "Adamın biri restorana gitmiş, 'Bana bir yer ayırın' demiş. Garson da 'Buyurun, şurası ayır' demiş. 🍽️",
-            "Soru: Sineğin büyüğüne ne denir? Cevap: El-sinek! (Hani el-feneri gibi) 🦟",
-            "Küçük su damlası annesine ne demiş? 'Anne, ben ne zaman sel olacağım?' 💧",
-            "Soru: En dertli meyve hangisidir? Cevap: 'Ah'lat! 🍐",
-            "Adamın biri yolda yürürken bir cüzdan bulmuş, içinde hiç para yokmuş ama sahibi varmış. Neden? Cüzdanın üstünde 'Vesikalık' yazıyormuş! 🖼️",
-            "Soru: Elektrik kesilince ne olur? Cevap: Karanlık olur! (Daha ne bekliyordun?) 💡",
-            "Bir gün iki delik yolda yürüyormuş, biri diğerine demiş ki: 'Amma da açığız ha!' 🕳️",
-            "Soru: Hiç bitmeyen hüzne ne denir? Cevap: Hüzün-baz! 🎭",
-            "Baba: 'Karne nasıl oğlum?' Çocuk: 'Okulun en popüleri benim baba, bütün hocalar bana takmış!' 🎓",
-            "Soru: Kediler neden bilgisayar kullanamaz? Cevap: Mouse'u yedikleri için! 🐭",
-            "Adamın biri her sabah banyoda şarkı söylüyormuş. Komşusu sormuş: 'Sesin çok güzel mi?' Adam: 'Yok, sadece şampuanın arkasındaki sözleri okuyorum.' 🧼"
-        ]
-        
-        await ctx.send(f"😂 {random.choice(sakalar)}")
-
-    @commands.command(aliases=['8ball', 'soru'])
-    async def ball(self, ctx, *, soru):
-        cevaplar = [
-            "✅ Evet, kesinlikle!",
-            "✅ Evet!",
-            "👍 Büyük ihtimalle",
-            "🤔 Belki...",
-            "🔮 Tekrar sor",
-            "👎 Pek sanmıyorum",
-            "❌ Hayır",
-            "❌ Kesinlikle hayır!",
-        ]
-        
-        embed = discord.Embed(title="🎱 Sihirli Küre", color=discord.Color.purple())
-        embed.add_field(name="❓ Soru", value=soru, inline=False)
-        embed.add_field(name="💬 Cevap", value=random.choice(cevaplar), inline=False)
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['hug'])
-    async def saril(self, ctx, member: discord.Member):
-        if member == ctx.author:
-            await ctx.send(f"🤗 {ctx.author.mention} kendine sarıldı... 😢")
-        else:
-            await ctx.send(f"🤗 {ctx.author.mention} → {member.mention} 💕")
-
-    @commands.command(aliases=['slap'])
-    async def tokatlat(self, ctx, member: discord.Member):
-        if member == ctx.author:
-            await ctx.send(f"🤦 {ctx.author.mention} kendine tokat attı...")
-        else:
-            await ctx.send(f"👋💥 {ctx.author.mention} → {member.mention} **ŞAAAK!**")
-
-    @commands.command(aliases=['roll'])
-    async def zarat(self, ctx):
-        zar = random.randint(1, 6)
-        await ctx.send(f"🎲 Zar: **{zar}**")
-
-    @commands.command(aliases=['flip', 'coin'])
-    async def yazitura(self, ctx):
-        sonuc = random.choice(["Yazı", "Tura"])
-        emoji = "🪙" if sonuc == "Yazı" else "💀"
-        await ctx.send(f"{emoji} **{sonuc}**")
-
-    @commands.command(aliases=['choose', 'pick'])
-    async def sec(self, ctx, *, secenekler):
-        liste = [s.strip() for s in secenekler.split(",") if s.strip()]
-        
-        if len(liste) < 2:
-            await ctx.send("❌ En az 2 seçenek gir! (virgülle ayır)")
-            return
-        
-        secilen = random.choice(liste)
-        await ctx.send(f"🎯 Seçilen: **{secilen}**")
-
-    @commands.command(aliases=['love', 'aşk'])
-    async def askmetre(self, ctx, kisi1: discord.Member, kisi2: discord.Member = None):
-        if kisi2 is None:
-            kisi2 = ctx.author
-        
-        seed = min(kisi1.id, kisi2.id) + max(kisi1.id, kisi2.id)
-        random.seed(seed)
-        oran = random.randint(0, 100)
-        random.seed()
-        
-        await ctx.send(f"💘 {kisi1.mention} 💕 {kisi2.mention}\n\n**%{oran}** aşk!")
 
 # =====================================================
 # 🔧 COG YÜKLEME
