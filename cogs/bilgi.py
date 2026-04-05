@@ -13,35 +13,32 @@ from utils import guvenli_cevap
 # =====================================================
 # 📅 TÜM TARİHLER - HER YIL SADECE BURAYI GÜNCELLE!
 # =====================================================
-# Yıl başında veya tarihler açıklandığında güncelle, başka yere dokunma!
 
 YIL = 2026  # Mevcut yıl
 
 # YKS Tarihleri (ÖSYM açıkladığında güncelle)
-# Format: (Ay, Gün, Saat, Dakika)
-YKS_TYT = (6, 20, 10, 15)   # 14 Haziran 10:15
-YKS_AYT = (6, 21, 10, 15)   # 15 Haziran 10:15
+YKS_TYT = (6, 20, 10, 15)   # 20 Haziran 10:15
+YKS_AYT = (6, 21, 10, 15)   # 21 Haziran 10:15
 YKS_YDT = (6, 15, 15, 45)   # 15 Haziran 15:45
 
 # LGS Tarihi (MEB açıkladığında güncelle)
-LGS_TARIH = (6, 14)          # 1 Haziran
+LGS_TARIH = (6, 14)          # 14 Haziran
 
 # Dini Bayramlar (Her yıl değişir - Diyanet'ten kontrol et)
-# Format: (Ay, Gün)
-RAMAZAN_BAYRAMI = (3, 9)   # 30 Mart (3 gün)
-KURBAN_BAYRAMI = (5, 27)     # 6 Haziran (4 gün)
+RAMAZAN_BAYRAMI = (3, 9)   # 9 Mart (3 gün)
+KURBAN_BAYRAMI = (5, 27)     # 27 Mayıs (4 gün)
 
 # Okul Tarihleri (MEB açıkladığında güncelle)
-KARNE_GUNU = (6, 26)        # 13 Haziran
-OKUL_ACILISI = (9, 7)       # 8 Eylül
+KARNE_GUNU = (6, 26)        # 26 Haziran
+OKUL_ACILISA = (9, 7)       # 7 Eylül
 
-# Değişken Özel Günler (Her yıl farklı güne denk gelir)
-ANNELER_GUNU = (5, 10)      # Mayıs 2. Pazar - 2025: 11 Mayıs
-BABALAR_GUNU = (6, 21)      # Haziran 3. Pazar - 2025: 15 Haziran
-BLACK_FRIDAY = (11, 27)     # Kasım son Cuma - 2025: 28 Kasım
+# Değişken Özel Günler
+ANNELER_GUNU = (5, 10)      # 10 Mayıs
+BABALAR_GUNU = (6, 21)      # 21 Haziran
+BLACK_FRIDAY = (11, 27)     # 27 Kasım
 
 # =====================================================
-# 📅 OTOMATİK TARİH OLUŞTURMA (BU KISMA DOKUNMA!)
+# 📅 OTOMATİK TARİH OLUŞTURMA
 # =====================================================
 
 # YKS tarihleri datetime objelerine çevir
@@ -53,9 +50,7 @@ YKS_SINAVLARI = {
 
 # Özel günler sözlüğü
 OZEL_GUNLER = {
-    # ═══════════════════════════════════════════════════
-    # 🇹🇷 RESMİ TATİLLER (SABİT - HER YIL AYNI)
-    # ═══════════════════════════════════════════════════
+    # RESMİ TATİLLER (SABİT)
     "Yılbaşı": {
         "tarih": (1, 1),
         "emoji": "🎆",
@@ -99,9 +94,7 @@ OZEL_GUNLER = {
         "tam_ad": "Cumhuriyet Bayramı"
     },
     
-    # ═══════════════════════════════════════════════════
-    # 🌙 DİNİ BAYRAMLAR (YUKARIDAN ÇEKİYOR)
-    # ═══════════════════════════════════════════════════
+    # DİNİ BAYRAMLAR
     "Ramazan Bayramı": {
         "tarih": RAMAZAN_BAYRAMI,
         "emoji": "🌙",
@@ -117,9 +110,7 @@ OZEL_GUNLER = {
         "tam_ad": "Kurban Bayramı"
     },
     
-    # ═══════════════════════════════════════════════════
-    # 💕 ÖZEL GÜNLER
-    # ═══════════════════════════════════════════════════
+    # ÖZEL GÜNLER
     "Sevgililer Günü": {
         "tarih": (2, 14),
         "emoji": "💕",
@@ -163,9 +154,7 @@ OZEL_GUNLER = {
         "tam_ad": "Yılbaşı Gecesi"
     },
     
-    # ═══════════════════════════════════════════════════
-    # 📝 OKUL & SINAV (YUKARIDAN ÇEKİYOR)
-    # ═══════════════════════════════════════════════════
+    # OKUL & SINAV
     "YKS TYT": {
         "tarih": (YKS_TYT[0], YKS_TYT[1]),
         "emoji": "📝",
@@ -193,15 +182,13 @@ OZEL_GUNLER = {
         "tam_ad": "Karne Günü (Yaz Tatili Başlangıcı)"
     },
     "Okulların Açılışı": {
-        "tarih": OKUL_ACILISI,
+        "tarih": OKUL_ACILISA,
         "emoji": "🏫",
         "yil": YIL,
         "tam_ad": "Okulların Açılışı"
     },
     
-    # ═══════════════════════════════════════════════════
-    # 🛒 DİĞER
-    # ═══════════════════════════════════════════════════
+    # DİĞER
     "Black Friday": {
         "tarih": BLACK_FRIDAY,
         "emoji": "🛒",
@@ -232,7 +219,7 @@ GUN_ISIMLERI = {
 }
 
 def turkce_tarih(tarih):
-    """Tarihi Türkçe formatla: 14 Haziran 2025, Cumartesi"""
+    """Tarihi Türkçe formatla: 14 Haziran 2026, Cumartesi"""
     gun = tarih.day
     ay = AY_ISIMLERI[tarih.month]
     yil = tarih.year
@@ -548,54 +535,6 @@ class Bilgi(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['yks2025', 'sınav', 'tyt', 'ayt'])
-    async def yks(self, ctx, sinav: str = "TYT"):
-        """YKS'ye kalan süreyi göster"""
-        sinav = sinav.upper()
-        if sinav not in YKS_SINAVLARI:
-            sinav = "TYT"
-        
-        tarih = YKS_SINAVLARI[sinav]
-        simdi = datetime.now()
-        kalan = tarih - simdi
-        
-        if kalan.total_seconds() <= 0:
-            await ctx.send(f"✅ **{sinav}** sınavı tamamlandı!")
-            return
-        
-        gun = kalan.days
-        saat = kalan.seconds // 3600
-        dakika = (kalan.seconds % 3600) // 60
-        hafta = gun // 7
-        
-        embed = discord.Embed(title=f"📝 {sinav} {YIL}", color=discord.Color.blue())
-        embed.description = (
-            f"📅 **{turkce_tarih(tarih)}**\n"
-            f"⏰ Saat: **{tarih.strftime('%H:%M')}**\n\n"
-            f"⏳ **{gun}** gün, **{saat}** saat, **{dakika}** dakika kaldı!"
-        )
-        embed.add_field(
-            name="📅 Hafta Bazında",
-            value=f"**{hafta}** hafta **{gun % 7}** gün",
-            inline=False
-        )
-        
-        # İlerleme çubuğu
-        toplam_gun = 365
-        gecen = max(0, toplam_gun - gun)
-        ilerleme = min(gecen / toplam_gun, 1.0)
-        bar_dolu = int(ilerleme * 10)
-        bar = "🟩" * bar_dolu + "⬜" * (10 - bar_dolu)
-        embed.add_field(
-            name="📊 İlerleme",
-            value=f"{bar} %{int(ilerleme*100)}",
-            inline=False
-        )
-        
-        embed.set_footer(text="📌 ÖSYM duyurularını takip et!")
-        
-        await ctx.send(embed=embed)
-
     # =====================================================
     # 📅 ÖZEL GÜNLER SAYACI
     # =====================================================
@@ -769,186 +708,6 @@ class Bilgi(commands.Cog):
             app_commands.Choice(name=f"{OZEL_GUNLER[g]['emoji']} {g}", value=g)
             for g in gunler if current.lower() in g.lower()
         ][:25]
-
-    @commands.command(aliases=['özelgün', 'tatil', 'bayram', 'countdown'])
-    async def sayac(self, ctx, *, gun: str = None):
-        """Özel günlere kalan süreyi göster"""
-        bugun = date.today()
-        
-        if gun is None:
-            # Yaklaşan 6 günü göster
-            yaklasan = []
-            
-            for isim, bilgi in OZEL_GUNLER.items():
-                ay, gun_no = bilgi["tarih"]
-                
-                if bilgi.get("yillik"):
-                    yil = bugun.year
-                    hedef = date(yil, ay, gun_no)
-                    if hedef < bugun:
-                        hedef = date(yil + 1, ay, gun_no)
-                else:
-                    yil = bilgi.get("yil", bugun.year)
-                    hedef = date(yil, ay, gun_no)
-                    if hedef < bugun:
-                        continue
-                
-                kalan = (hedef - bugun).days
-                emoji = bilgi.get("emoji", "📅")
-                yaklasan.append((kalan, isim, emoji, hedef))
-            
-            yaklasan.sort(key=lambda x: x[0])
-            
-            embed = discord.Embed(title="📅 Yaklaşan Özel Günler", color=discord.Color.purple())
-            
-            text = ""
-            for kalan, isim, emoji, hedef in yaklasan[:6]:
-                tarih_str = turkce_tarih_kisa(hedef)
-                if kalan == 0:
-                    text += f"{emoji} **{isim}**: 🎉 BUGÜN!\n"
-                elif kalan == 1:
-                    text += f"{emoji} **{isim}**: ⭐ YARIN! ({tarih_str})\n"
-                else:
-                    text += f"{emoji} **{isim}**: {kalan} gün ({tarih_str})\n"
-            
-            embed.description = text if text else "Yaklaşan gün yok!"
-            embed.set_footer(text="💡 !sayac <gün adı> ile detay gör")
-            await ctx.send(embed=embed)
-            
-        else:
-            # Belirli gün ara
-            gun_lower = gun.lower()
-            bulunan = None
-            
-            for isim, bilgi in OZEL_GUNLER.items():
-                if gun_lower in isim.lower():
-                    bulunan = (isim, bilgi)
-                    break
-            
-            if not bulunan:
-                await ctx.send(f"❌ '**{gun}**' bulunamadı!\n💡 Örnek: `ramazan`, `23 nisan`, `yılbaşı`, `kurban`")
-                return
-            
-            isim, bilgi = bulunan
-            ay, gun_no = bilgi["tarih"]
-            emoji = bilgi.get("emoji", "📅")
-            
-            if bilgi.get("yillik"):
-                yil = bugun.year
-                hedef = date(yil, ay, gun_no)
-                if hedef < bugun:
-                    hedef = date(yil + 1, ay, gun_no)
-            else:
-                yil = bilgi.get("yil", bugun.year)
-                hedef = date(yil, ay, gun_no)
-            
-            kalan = (hedef - bugun).days
-            hedef_datetime = datetime(hedef.year, hedef.month, hedef.day)
-            tarih_str = turkce_tarih(hedef_datetime)
-            
-            if kalan == 0:
-                embed = discord.Embed(
-                    title=f"{emoji} {isim}",
-                    description=f"🎉 **BUGÜN!**\n📅 {tarih_str}",
-                    color=discord.Color.gold()
-                )
-            elif kalan > 0:
-                embed = discord.Embed(
-                    title=f"{emoji} {isim}",
-                    color=discord.Color.blue()
-                )
-                embed.add_field(name="📅 Tarih", value=tarih_str, inline=False)
-                embed.add_field(name="⏳ Kalan", value=f"**{kalan}** gün", inline=True)
-                
-                if kalan > 7:
-                    embed.add_field(
-                        name="📅 Hafta",
-                        value=f"**{kalan // 7}** hafta **{kalan % 7}** gün",
-                        inline=True
-                    )
-                
-                if "sure" in bilgi:
-                    embed.add_field(name="📆 Tatil", value=f"{bilgi['sure']} gün", inline=True)
-            else:
-                embed = discord.Embed(
-                    title=f"{emoji} {isim}",
-                    description="Bu etkinlik geçti!",
-                    color=discord.Color.greyple()
-                )
-            
-            await ctx.send(embed=embed)
-
-    # =====================================================
-    # ℹ️ PREFIX KOMUTLARI
-    # =====================================================
-
-    @commands.command()
-    async def ping(self, ctx):
-        """Bot gecikmesini göster"""
-        latency = round(self.bot.latency * 1000)
-        
-        embed = discord.Embed(title="🏓 Pong!", color=discord.Color.green())
-        embed.add_field(name="📡 Gecikme", value=f"**{latency}ms**")
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['server', 'guild'])
-    async def sunucu(self, ctx):
-        """Sunucu bilgilerini göster"""
-        g = ctx.guild
-        
-        embed = discord.Embed(title=f"📊 {g.name}", color=discord.Color.blue())
-        
-        if g.icon:
-            embed.set_thumbnail(url=g.icon.url)
-        
-        embed.add_field(name="👥 Üyeler", value=g.member_count, inline=True)
-        embed.add_field(name="💬 Kanallar", value=len(g.channels), inline=True)
-        embed.add_field(name="🎭 Roller", value=len(g.roles), inline=True)
-        embed.add_field(name="📅 Kuruluş", value=g.created_at.strftime("%d/%m/%Y"), inline=True)
-        embed.add_field(name="👑 Sahip", value=g.owner.mention if g.owner else "?", inline=True)
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['user', 'whois', 'kim'])
-    async def kullanici(self, ctx, member: discord.Member = None):
-        """Kullanıcı bilgilerini göster"""
-        member = member or ctx.author
-        
-        embed = discord.Embed(title=f"👤 {member}", color=member.color)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        
-        embed.add_field(name="🆔 ID", value=member.id, inline=True)
-        embed.add_field(name="📅 Katılma", value=member.joined_at.strftime("%d/%m/%Y") if member.joined_at else "?", inline=True)
-        embed.add_field(name="🎂 Hesap", value=member.created_at.strftime("%d/%m/%Y"), inline=True)
-        
-        roles = [r.mention for r in member.roles[1:][:5]]
-        if roles:
-            embed.add_field(name="🎭 Roller", value=" ".join(roles), inline=False)
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['botinfo', 'info', 'hakkında'])
-    async def botbilgi(self, ctx):
-        """Bot hakkında bilgi"""
-        embed = discord.Embed(title="⚡ WOWSY Bot", color=discord.Color.gold())
-        embed.description = "Tek Bot, Sonsuz Eğlence!"
-        embed.add_field(name="👨‍💻 Geliştirici", value="WOWSY", inline=True)
-        embed.add_field(name="🏠 Sunucular", value=f"{len(self.bot.guilds)}", inline=True)
-        embed.add_field(name="🏓 Gecikme", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
-        
-        if self.bot.user:
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(aliases=['invite'])
-    async def davet(self, ctx):
-        """Botu sunucuna davet et"""
-        embed = discord.Embed(title="🔗 Davet Linki", color=discord.Color.blue())
-        embed.description = "[Botu Sunucuna Ekle](https://discord.com/oauth2/authorize?client_id=1485291664502427708)"
-        
-        await ctx.send(embed=embed)
 
 # =====================================================
 # 🔧 COG YÜKLEME
