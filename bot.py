@@ -1,5 +1,5 @@
 # =====================================================
-# 🚀 WOWSY BOT - ANA DOSYA (TAM VERSİYON)
+# 🚀 WOWSY BOT - ANA DOSYA
 # =====================================================
 
 import os
@@ -364,19 +364,10 @@ async def on_guild_remove(guild):
 @bot.event
 async def on_message(message):
     """Mesaj geldiğinde"""
-    # Bot mesajlarını yoksay
     if message.author.bot:
         return
-
-    # DM mesajları
-    if not message.guild:
-        await message.channel.send(
-            "👋 Merhaba! Ben sunucularda çalışan bir botum.\n"
-            "Beni bir sunucuya ekleyerek kullanabilirsin!"
-        )
-        return
-
-    # Komutları işle
+    
+    # Prefix komutları işle
     await bot.process_commands(message)
 
 @bot.event
@@ -403,58 +394,7 @@ async def on_voice_state_update(member, before, after):
                     pass
 
 # =====================================================
-# ❌ HATA YÖNETİMİ - PREFIX KOMUTLAR
-# =====================================================
-
-@bot.event
-async def on_command_error(ctx, error):
-    """Prefix komut hataları"""
-
-    # Komut bulunamadı - sessizce geç
-    if isinstance(error, commands.CommandNotFound):
-        return
-
-    # Cooldown
-    if isinstance(error, commands.CommandOnCooldown):
-        dakika = int(error.retry_after // 60)
-        saniye = int(error.retry_after % 60)
-        if dakika > 0:
-            await ctx.send(f"⏰ Bekle: **{dakika}dk {saniye}sn**", delete_after=10)
-        else:
-            await ctx.send(f"⏰ Bekle: **{saniye}sn**", delete_after=10)
-        return
-
-    # Yetki hataları
-    if isinstance(error, commands.MissingPermissions):
-        perms = ", ".join(error.missing_permissions)
-        await ctx.send(f"❌ Eksik yetki: `{perms}`", delete_after=10)
-        return
-
-    if isinstance(error, commands.BotMissingPermissions):
-        perms = ", ".join(error.missing_permissions)
-        await ctx.send(f"❌ Botun eksik yetkisi: `{perms}`", delete_after=10)
-        return
-
-    # Kullanıcı bulunamadı
-    if isinstance(error, commands.MemberNotFound):
-        await ctx.send("❌ Kullanıcı bulunamadı!", delete_after=10)
-        return
-
-    # Eksik parametre
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"❌ Eksik parametre: `{error.param.name}`", delete_after=10)
-        return
-
-    # Yanlış parametre
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Yanlış parametre türü!", delete_after=10)
-        return
-
-    # Diğer hatalar - sadece logla
-    print(f"❌ Komut Hatası [{ctx.command}]: {type(error).__name__}: {error}")
-
-# =====================================================
-# ❌ HATA YÖNETİMİ - SLASH KOMUTLAR (ÇİFT MESAJ SORUNU DÜZELTİLDİ)
+# ❌ HATA YÖNETİMİ - SLASH KOMUTLAR
 # =====================================================
 
 @bot.tree.error
@@ -515,6 +455,7 @@ async def load_cogs():
         ('cogs.bilgi', 'ℹ️ Bilgi'),
         ('cogs.yapay_zeka', '🤖 Yapay Zeka'),
         ('cogs.yardim', '📚 Yardım'),
+        ('cogs.patron', '👑 Patron'),
     ]
 
     print("")
@@ -543,58 +484,6 @@ async def load_cogs():
     print(f"📊 Sonuç: {loaded} yüklendi, {failed} başarısız")
 
     return loaded, failed
-
-# =====================================================
-# 🔧 SAHİP KOMUTLARI
-# =====================================================
-
-@bot.command(name='reload', hidden=True)
-@commands.is_owner()
-async def reload_cog(ctx, cog_name: str):
-    """Bir cog'u yeniden yükle"""
-    try:
-        await bot.reload_extension(f'cogs.{cog_name}')
-        await ctx.send(f"✅ `{cog_name}` yeniden yüklendi!")
-    except Exception as e:
-        await ctx.send(f"❌ Hata: {e}")
-
-@bot.command(name='sync', hidden=True)
-@commands.is_owner()
-async def sync_commands(ctx):
-    """Slash komutlarını senkronize et"""
-    try:
-        synced = await bot.tree.sync()
-        await ctx.send(f"✅ {len(synced)} komut senkronize edildi!")
-    except Exception as e:
-        await ctx.send(f"❌ Hata: {e}")
-
-@bot.command(name='status', hidden=True)
-@commands.is_owner()
-async def bot_status(ctx):
-    """Bot durumunu göster"""
-    embed = discord.Embed(
-        title="📊 Bot Durumu",
-        color=discord.Color.blue(),
-        timestamp=datetime.now()
-    )
-
-    embed.add_field(name="📡 Ping", value=f"{round(bot.latency * 1000)}ms", inline=True)
-    embed.add_field(name="📊 Sunucular", value=f"{len(bot.guilds)}", inline=True)
-    embed.add_field(name="🎵 Ses", value=f"{len(bot.voice_clients)} aktif", inline=True)
-    embed.add_field(name="🔥 Firebase", value="✅" if db else "❌", inline=True)
-    embed.add_field(name="🤖 Groq", value="✅" if groq_client else "❌", inline=True)
-
-    cookie_ok, cookie_msg = check_youtube_cookies()
-    embed.add_field(name="🍪 Çerez", value=f"{'✅' if cookie_ok else '❌'} {cookie_msg}", inline=True)
-
-    await ctx.send(embed=embed)
-
-@bot.command(name='shutdown', hidden=True)
-@commands.is_owner()
-async def shutdown_bot(ctx):
-    """Botu kapat"""
-    await ctx.send("👋 Bot kapatılıyor...")
-    await bot.close()
 
 # =====================================================
 # 🚀 ANA FONKSİYON
