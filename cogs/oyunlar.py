@@ -110,53 +110,6 @@ class Oyunlar(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['av'])
-    async def hunt(self, ctx):
-        data = get_economy(ctx.author.id)
-        simdi = datetime.now()
-        
-        if 'son_hunt' in data and data['son_hunt']:
-            try:
-                son = datetime.fromisoformat(data['son_hunt'])
-                if simdi - son < timedelta(minutes=2):
-                    kalan = timedelta(minutes=2) - (simdi - son)
-                    sn = int(kalan.total_seconds())
-                    await ctx.send(f"🏹 Silahını temizliyorsun! **{sn} saniye** bekle.")
-                    return
-            except:
-                pass
-        
-        data['son_hunt'] = simdi.isoformat()
-        
-        if random.randint(1, 100) <= 15:
-            update_economy(ctx.author.id, data)
-            await ctx.send("💨 Hayvan kaçtı! Bir şey avlayamadın...")
-            return
-        
-        hayvanlar = {
-            '🐀': (10, 30, "Fare"),
-            '🐇': (20, 50, "Tavşan"),
-            '🦊': (40, 80, "Tilki"),
-            '🐺': (60, 120, "Kurt"),
-            '🐻': (100, 200, "Ayı"),
-            '🦁': (150, 300, "Aslan"),
-            '🐉': (400, 800, "Ejderha")
-        }
-        weights = [25, 22, 18, 15, 10, 7, 3]
-        
-        emoji, (min_p, max_p, isim) = random.choices(list(hayvanlar.items()), weights=weights)[0]
-        para = random.randint(min_p, max_p)
-        
-        data['para'] += para
-        update_economy(ctx.author.id, data)
-        
-        embed = discord.Embed(title="🏹 Avlanma", color=discord.Color.green())
-        embed.description = f"Bir **{isim}** {emoji} avladın!"
-        embed.add_field(name="💰 Kazanç", value=f"+{para}💰", inline=True)
-        embed.add_field(name="🎒 Bakiye", value=f"{data['para']:,}💰", inline=True)
-        
-        await ctx.send(embed=embed)
-
     # =====================================================
     # 🎣 BALIK TUTMA
     # =====================================================
@@ -222,51 +175,6 @@ class Oyunlar(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['balık', 'fishing'])
-    async def fish(self, ctx):
-        data = get_economy(ctx.author.id)
-        simdi = datetime.now()
-        
-        if 'son_balik' in data and data['son_balik']:
-            try:
-                son = datetime.fromisoformat(data['son_balik'])
-                if simdi - son < timedelta(minutes=3):
-                    kalan = timedelta(minutes=3) - (simdi - son)
-                    dk = int(kalan.total_seconds() // 60)
-                    sn = int(kalan.total_seconds() % 60)
-                    await ctx.send(f"🎣 Oltanı hazırlıyorsun! **{dk}dk {sn}sn** bekle.")
-                    return
-            except:
-                pass
-        
-        data['son_balik'] = simdi.isoformat()
-        
-        baliklar = [
-            ('🗑️', 'Çöp', 0, 0, 12),
-            ('🦐', 'Karides', 5, 20, 18),
-            ('🐟', 'Balık', 20, 50, 25),
-            ('🐠', 'Tropikal', 40, 80, 18),
-            ('🦑', 'Kalamar', 60, 120, 12),
-            ('🐙', 'Ahtapot', 100, 180, 8),
-            ('🦈', 'Köpekbalığı', 200, 400, 5),
-            ('🐋', 'Balina', 600, 1200, 2),
-        ]
-        
-        agirliklar = [b[4] for b in baliklar]
-        yakalanan = random.choices(baliklar, weights=agirliklar)[0]
-        emoji, isim, min_p, max_p, _ = yakalanan
-        
-        if min_p == 0:
-            update_economy(ctx.author.id, data)
-            await ctx.send(f"💔 Sadece **{isim}** {emoji} çıktı...")
-            return
-        
-        para = random.randint(min_p, max_p)
-        data['para'] += para
-        update_economy(ctx.author.id, data)
-        
-        await ctx.send(f"🎣 Bir **{isim}** {emoji} yakaladın! **+{para}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
-
     # =====================================================
     # 🎰 SLOT
     # =====================================================
@@ -331,59 +239,8 @@ class Oyunlar(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command()
-    async def slot(self, ctx, bahis: int = 10):
-        data = get_economy(ctx.author.id)
-        
-        if bahis < 10:
-            await ctx.send("❌ Minimum bahis: **10💰**")
-            return
-        
-        if data['para'] < bahis:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-        
-        data['para'] -= bahis
-        emojiler = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣']
-        sans = random.randint(1, 100)
-        
-        if sans <= 2:
-            secilen = random.choice(emojiler)
-            sonuc = [secilen, secilen, secilen]
-            if secilen == '💎':
-                carpan = 50
-            elif secilen == '7️⃣':
-                carpan = 30
-            else:
-                carpan = 10
-            odul = bahis * carpan
-            data['para'] += odul
-            mesaj = f"🎉 **JACKPOT!** +{odul:,}💰"
-            renk = discord.Color.gold()
-        elif sans <= 18:
-            secilen = random.choice(emojiler)
-            diger = random.choice([e for e in emojiler if e != secilen])
-            sonuc = [secilen, secilen, diger]
-            random.shuffle(sonuc)
-            odul = bahis * 2
-            data['para'] += odul
-            mesaj = f"✨ **İkili!** +{odul:,}💰"
-            renk = discord.Color.green()
-        else:
-            sonuc = random.sample(emojiler, 3)
-            mesaj = f"😢 Kaybettin! -{bahis:,}💰"
-            renk = discord.Color.red()
-        
-        update_economy(ctx.author.id, data)
-        
-        embed = discord.Embed(title="🎰 SLOT", color=renk)
-        embed.description = f"**[ {' | '.join(sonuc)} ]**\n\n{mesaj}"
-        embed.add_field(name="💰 Bakiye", value=f"{data['para']:,}💰")
-        
-        await ctx.send(embed=embed)
-
     # =====================================================
-    # 🪙 COINFLIP (DAHA AZ TEKRAR EDEN)
+    # 🪙 COINFLIP
     # =====================================================
 
     @app_commands.command(name="coinflip", description="Yazı-tura bahis oyunu")
@@ -438,39 +295,8 @@ class Oyunlar(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['cf', 'yazıtura'])
-    async def coinflip(self, ctx, bahis: int):
-        data = get_economy(ctx.author.id)
-        
-        if bahis < 10:
-            await ctx.send("❌ Minimum bahis: **10💰**")
-            return
-        
-        if data['para'] < bahis:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-        
-        data['para'] -= bahis
-        
-        onceki = data.get('son_coinflip_sonuc', None)
-        
-        if onceki and random.randint(1, 100) <= 70:
-            sonuc = "TURA" if onceki == "YAZI" else "YAZI"
-        else:
-            sonuc = random.choice(["YAZI", "TURA"])
-        
-        if random.randint(1, 100) <= 48:
-            odul = bahis * 2
-            data['para'] += odul
-            await ctx.send(f"🪙 **{sonuc}** - Kazandın! **+{odul:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
-        else:
-            await ctx.send(f"💀 **{sonuc}** - Kaybettin! **-{bahis:,}💰**\n🎒 Bakiye: **{data['para']:,}💰**")
-        
-        data['son_coinflip_sonuc'] = sonuc
-        update_economy(ctx.author.id, data)
-
     # =====================================================
-    # 🎲 ZAR (YENİ SİSTEM)
+    # 🎲 ZAR
     # =====================================================
 
     @app_commands.command(name="dice", description="Zarla bahis - Yüksek sayı kazan!")
@@ -527,43 +353,6 @@ class Oyunlar(commands.Cog):
         embed.set_footer(text="6=3x | 5=1.5x | 4=İade | 3=Kayıp | 1-2=Ekstra Ceza!")
         
         await guvenli_cevap(interaction, embed=embed)
-
-    @commands.command(aliases=['zar'])
-    async def dice(self, ctx, bahis: int):
-        data = get_economy(ctx.author.id)
-        
-        if bahis < 10:
-            await ctx.send("❌ Minimum bahis: **10💰**")
-            return
-        
-        if data['para'] < bahis:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-        
-        data['para'] -= bahis
-        zar = random.randint(1, 6)
-        
-        if zar == 6:
-            odul = bahis * 3
-            data['para'] += odul
-            mesaj = f"🎲 **{zar}** - ALTIN 6! **+{odul:,}💰**"
-        elif zar == 5:
-            odul = int(bahis * 1.5)
-            data['para'] += odul
-            mesaj = f"🎲 **{zar}** - Güzel! **+{odul:,}💰**"
-        elif zar == 4:
-            odul = bahis
-            data['para'] += odul
-            mesaj = f"🎲 **{zar}** - İade! **+{odul:,}💰**"
-        elif zar in [1, 2]:
-            ceza_ek = bahis // 2
-            data['para'] = max(0, data['para'] - ceza_ek)
-            mesaj = f"🎲 **{zar}** - ÇOK KÖTÜ! Ekstra ceza: **-{bahis + ceza_ek:,}💰**"
-        else:
-            mesaj = f"🎲 **{zar}** - Kaybettin! **-{bahis:,}💰**"
-        
-        update_economy(ctx.author.id, data)
-        await ctx.send(f"{mesaj}\n🎒 Bakiye: **{data['para']:,}💰**")
 
     # =====================================================
     # 🎡 RULET
@@ -622,57 +411,8 @@ class Oyunlar(commands.Cog):
         
         await guvenli_cevap(interaction, embed=embed)
 
-    @commands.command(aliases=['rulet'])
-    async def roulette(self, ctx, bahis: int, renk: str):
-        renk = renk.lower()
-        if renk in ['kırmızı', 'k', 'red', 'r']:
-            renk = 'kırmızı'
-        elif renk in ['siyah', 's', 'black', 'b']:
-            renk = 'siyah'
-        elif renk in ['yeşil', 'y', 'green', 'g']:
-            renk = 'yeşil'
-        else:
-            await ctx.send("❌ Renk seç: `kırmızı`, `siyah` veya `yeşil`")
-            return
-        
-        data = get_economy(ctx.author.id)
-        
-        if bahis < 10:
-            await ctx.send("❌ Minimum bahis: **10💰**")
-            return
-        
-        if data['para'] < bahis:
-            await ctx.send("❌ Yeterli paran yok!")
-            return
-        
-        data['para'] -= bahis
-        
-        sans = random.randint(1, 100)
-        if sans <= 5:
-            sonuc = 'yeşil'
-            emoji = '🟢'
-        elif sans <= 52:
-            sonuc = 'kırmızı'
-            emoji = '🔴'
-        else:
-            sonuc = 'siyah'
-            emoji = '⚫'
-        
-        if sonuc == renk:
-            if sonuc == 'yeşil':
-                odul = bahis * 14
-            else:
-                odul = bahis * 2
-            data['para'] += odul
-            mesaj = f"🎉 Kazandın! **+{odul:,}💰**"
-        else:
-            mesaj = f"😢 Kaybettin! **-{bahis:,}💰**"
-        
-        update_economy(ctx.author.id, data)
-        await ctx.send(f"🎡 {emoji} **{sonuc.upper()}**\n{mesaj}\n🎒 Bakiye: **{data['para']:,}💰**")
-
     # =====================================================
-    # 🃏 BLACKJACK (REACTİON İLE)
+    # 🃏 BLACKJACK
     # =====================================================
 
     @app_commands.command(name="blackjack", description="21 kart oyunu")
@@ -828,12 +568,8 @@ class Oyunlar(commands.Cog):
         await msg.clear_reactions()
         await msg.edit(embed=embed)
 
-    @commands.command(aliases=['bj', '21'])
-    async def blackjack(self, ctx, bahis: int):
-        await ctx.send("💡 Blackjack için `/blackjack` slash komutunu kullan!")
-
     # =====================================================
-    # 🚀 CRASH (DÜZELTİLMİŞ)
+    # 🚀 CRASH
     # =====================================================
 
     @app_commands.command(name="crash", description="Çarpan yükselir, patlamadan çek!")
@@ -955,10 +691,6 @@ class Oyunlar(commands.Cog):
                 pass
             await msg.edit(embed=embed)
 
-    @commands.command()
-    async def crash(self, ctx, bahis: int):
-        await ctx.send("💡 Crash için `/crash` slash komutunu kullan!")
-
     # =====================================================
     # ⚔️ BATTLE
     # =====================================================
@@ -1061,10 +793,6 @@ class Oyunlar(commands.Cog):
         embed.add_field(name="💰 Ödül", value=f"+{toplam_odul:,}💰", inline=True)
         
         await interaction.edit_original_response(content=None, embed=embed)
-
-    @commands.command(aliases=['savaş', 'pvp', 'duel'])
-    async def battle(self, ctx, member: discord.Member, bahis: int = 100):
-        await ctx.send(f"💡 Battle için `/battle @{member.name} {bahis}` slash komutunu kullan!")
 
 # =====================================================
 # 🔧 COG YÜKLEME
