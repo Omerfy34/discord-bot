@@ -8,6 +8,7 @@ from discord import app_commands
 
 from utils import guvenli_cevap
 
+
 # =====================================================
 # 📚 YARDIM COG
 # =====================================================
@@ -24,7 +25,7 @@ class Yardim(commands.Cog):
     async def slash_yardim(self, interaction: discord.Interaction):
         embed = discord.Embed(
             title="⚡ WOWSY BOT - KOMUTLAR",
-            description="Hem **`/`** (slash) hem **`!`** (prefix) komutları kullanabilirsin!\n\n"
+            description="**`/`** (slash) komutları kullan!\n\n"
                         "📌 **Slash komutlar** için `/` yaz ve otomatik tamamlama kullan.",
             color=discord.Color.gold()
         )
@@ -104,6 +105,7 @@ class Yardim(commands.Cog):
                   "kaçcm   - Boy ölç 😏\n"
                   "gaytest - Gay testi 🏳️‍🌈\n"
                   "iqtest  - IQ testi 🧠\n"
+                  "aykut   - Aykut Elmas GIF\n"
                   "```",
             inline=True
         )
@@ -112,8 +114,13 @@ class Yardim(commands.Cog):
             name="🤖 YAPAY ZEKA",
             value="```\n"
                   "ai      - Soru sor\n"
+                  "rol     - AI rolü seç\n"
+                  "özelrol - Özel rol yaz\n"
+                  "rolsıfırla- Sıfırla\n"
+                  "rolbilgi- Durum göster\n"
+                  "görsel  - Görsel oluştur\n"
                   "tercume - Çeviri yap\n"
-                  "hikaye  - Hikaye oluştur\n"
+                  "hikaye  - Hikaye yaz\n"
                   "özet    - Metin özetle\n"
                   "kod     - Kod yaz\n"
                   "şiir    - Şiir yaz\n"
@@ -136,7 +143,7 @@ class Yardim(commands.Cog):
             inline=True
         )
         
-        embed.set_footer(text="⚡ WOWSY Bot | Geliştirici: WOWSY | /ekonomi veya /oyunlar ile detay al!")
+        embed.set_footer(text="⚡ WOWSY Bot | Geliştirici: WOWSY | /aiyardım ile AI detayları!")
         
         if self.bot.user:
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
@@ -321,9 +328,45 @@ class Yardim(commands.Cog):
         embed = discord.Embed(title="🤖 YAPAY ZEKA KOMUTLARI", color=discord.Color.blue())
         
         embed.add_field(
-            name="💬 Sohbet",
+            name="💬 Hafızalı Sohbet",
             value="**/ai** `<soru>` - AI'ya soru sor\n"
-                  "Her türlü soruyu sorabilirsin!",
+                  "├ 🧠 Son 4 mesajlaşmayı hatırlar\n"
+                  "├ 🎭 Aktif role göre cevap verir\n"
+                  "└ Her kullanıcının ayrı hafızası var",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🎭 Rol Sistemi",
+            value="**/rol** - 12 hazır rolden birini seç\n"
+                  "├ 🏴‍☠️ Korsan | 🌸 Anime | 🤔 Filozof\n"
+                  "├ 🎤 Rapper | 🔍 Dedektif | 👨‍🍳 Aşçı\n"
+                  "├ 🔬 Bilimci | 🐱 Kedi | 🤖 Robot\n"
+                  "└ 🧛 Vampir | 📹 YouTuber | 💼 Asistan\n\n"
+                  "**/özelrol** `<açıklama>` - Kendi rolünü yaz\n"
+                  "**/rolsıfırla** - Rol ve hafızayı sıfırla\n"
+                  "**/rolbilgi** - Aktif rol ve hafıza durumu",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🧠 Hafıza Yönetimi",
+            value="**/hafızasil** - AI hafızasını temizle\n"
+                  "├ Son 4 soru-cevap kayıtlı\n"
+                  "└ Sıfırdan başlamak için temizle",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🎨 Görsel Oluşturma",
+            value="**/görsel** `<prompt>` `[boyut]` - AI ile görsel oluştur\n"
+                  "├ 📱 Kare: 1024x1024 (varsayılan)\n"
+                  "├ 🖥️ Geniş: 1280x720\n"
+                  "├ 📱 Dikey: 720x1280\n"
+                  "├ 🎬 Sinematik: 1920x1080\n"
+                  "└ 📸 Portre: 768x1024\n\n"
+                  "💡 İngilizce prompt daha iyi sonuç verir!\n"
+                  "Türkçe yazarsan otomatik çevrilir.",
             inline=False
         )
         
@@ -348,7 +391,7 @@ class Yardim(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="🤖 Powered by Groq AI (Llama 3.1)")
+        embed.set_footer(text="🤖 Powered by Groq AI (Llama 3.1) & Pollinations.ai 🎨")
         
         await guvenli_cevap(interaction, embed=embed)
 
@@ -359,6 +402,12 @@ class Yardim(commands.Cog):
         embed.add_field(
             name="🖼️ Profil",
             value="**/avatar** `[@kullanıcı]` - Profil resmini göster",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🎬 Aykut Elmas",
+            value="**/aykut** - Rastgele Aykut Elmas GIF'i (43 GIF)",
             inline=False
         )
         
@@ -452,7 +501,7 @@ class Yardim(commands.Cog):
     async def yardım(self, ctx):
         embed = discord.Embed(
             title="⚡ WOWSY BOT - KOMUTLAR",
-            description="Hem **`/`** (slash) hem **`!`** (prefix) komutları kullanabilirsin!",
+            description="**`/`** (slash) komutları kullan!",
             color=discord.Color.gold()
         )
         
@@ -482,13 +531,13 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="🎲 EĞLENCE",
-            value="`avatar` `şaka` `8ball` `sarıl` `tokatlat` `seç` `aşkmetre` `kaçcm` `gaytest` `iqtest`",
+            value="`aykut` `avatar` `şaka` `8ball` `sarıl` `tokatlat` `seç` `aşkmetre` `kaçcm` `gaytest` `iqtest`",
             inline=False
         )
         
         embed.add_field(
             name="🤖 YAPAY ZEKA",
-            value="`ai` `tercume` `hikaye` `özet` `şiir`",
+            value="`ai` `rol` `özelrol` `rolsıfırla` `rolbilgi` `görsel` `tercume` `hikaye` `özet` `kod` `şiir`",
             inline=False
         )
         
@@ -498,7 +547,7 @@ class Yardim(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text="⚡ WOWSY Bot | Detay için /ekonomi, /oyunlar, /eğlence, /sayaçlar")
+        embed.set_footer(text="⚡ WOWSY Bot | Detay için /aiyardım, /ekonomi, /oyunlar, /eğlence, /sayaçlar")
         
         if self.bot.user:
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
@@ -511,26 +560,26 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="📊 Temel",
-            value="`!bakiye` - Para görüntüle\n"
-                  "`!günlük` - 24 saatte bir\n"
-                  "`!bedava` - 2 saatte bir\n"
-                  "`!çalış` - 30 dakikada bir",
+            value="`/bakiye` - Para görüntüle\n"
+                  "`/günlük` - 24 saatte bir\n"
+                  "`/bedava` - 2 saatte bir\n"
+                  "`/çalış` - 30 dakikada bir",
             inline=True
         )
         
         embed.add_field(
             name="🏦 Banka",
-            value="`!yatır <miktar>` - Yatır\n"
-                  "`!çek <miktar>` - Çek\n"
-                  "`!gönder @kişi <miktar>`\n"
-                  "`!faiz` - Faiz topla",
+            value="`/yatır <miktar>` - Yatır\n"
+                  "`/çek <miktar>` - Çek\n"
+                  "`/gönder @kişi <miktar>`\n"
+                  "`/faiz` - Faiz topla",
             inline=True
         )
         
         embed.add_field(
             name="📈 Diğer",
-            value="`!soygun @kişi` - Riskli!\n"
-                  "`!zenginler` - Top 10",
+            value="`/soygun @kişi` - Riskli!\n"
+                  "`/zenginler` - Top 10",
             inline=True
         )
         
@@ -544,17 +593,17 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="🆓 Ücretsiz",
-            value="`!hunt` - Avlan (2dk)\n"
-                  "`!fish` - Balık tut (3dk)",
+            value="`/hunt` - Avlan (2dk)\n"
+                  "`/fish` - Balık tut (3dk)",
             inline=True
         )
         
         embed.add_field(
             name="🎰 Bahis",
-            value="`!slot <bahis>`\n"
-                  "`!coinflip <bahis>`\n"
-                  "`!dice <bahis>`\n"
-                  "`!roulette <bahis> <renk>`",
+            value="`/slot <bahis>`\n"
+                  "`/coinflip <bahis>`\n"
+                  "`/dice <bahis>`\n"
+                  "`/roulette <bahis> <renk>`",
             inline=True
         )
         
@@ -576,20 +625,20 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="▶️ Temel",
-            value="`!play <şarkı>` - Çal\n"
-                  "`!pause` - Duraklat\n"
-                  "`!devam` - Devam et\n"
-                  "`!skip` - Atla\n"
-                  "`!stop` - Durdur",
+            value="`/play <şarkı>` - Çal\n"
+                  "`/pause` - Duraklat\n"
+                  "`/devam` - Devam et\n"
+                  "`/skip` - Atla\n"
+                  "`/stop` - Durdur",
             inline=True
         )
         
         embed.add_field(
             name="📋 Diğer",
-            value="`!queue` - Kuyruk\n"
-                  "`!join` - Katıl\n"
-                  "`!leave` - Ayrıl\n"
-                  "`!np` - Şu an çalan",
+            value="`/queue` - Kuyruk\n"
+                  "`/join` - Katıl\n"
+                  "`/leave` - Ayrıl\n"
+                  "`/np` - Şu an çalan",
             inline=True
         )
         
@@ -601,26 +650,27 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="😂 Genel",
-            value="`!avatar` - Profil resmi\n"
-                  "`!şaka` - Rastgele şaka\n"
-                  "`!8ball <soru>` - Sihirli küre\n"
-                  "`!seç <a, b, c>` - Seçim yap",
+            value="`/aykut` - Aykut Elmas GIF\n"
+                  "`/avatar` - Profil resmi\n"
+                  "`/şaka` - Rastgele şaka\n"
+                  "`/8ball <soru>` - Sihirli küre\n"
+                  "`/seç <a, b, c>` - Seçim yap",
             inline=True
         )
         
         embed.add_field(
             name="💕 Sosyal",
-            value="`!sarıl @kişi`\n"
-                  "`!tokatlat @kişi`\n"
-                  "`!aşkmetre @k1 @k2`",
+            value="`/sarıl @kişi`\n"
+                  "`/tokatlat @kişi`\n"
+                  "`/aşkmetre @k1 @k2`",
             inline=True
         )
         
         embed.add_field(
             name="📏 Testler 😏",
-            value="`!kaçcm` - Boy ölçümü\n"
-                  "`!gaytest` - Gay testi\n"
-                  "`!iqtest` - IQ testi",
+            value="`/kaçcm` - Boy ölçümü\n"
+                  "`/gaytest` - Gay testi\n"
+                  "`/iqtest` - IQ testi",
             inline=True
         )
         
@@ -634,19 +684,19 @@ class Yardim(commands.Cog):
         
         embed.add_field(
             name="📚 YKS",
-            value="`!yks` - TYT'ye kalan\n"
-                  "`!yks TYT` - TYT sayacı\n"
-                  "`!yks AYT` - AYT sayacı\n"
+            value="`/yks` - TYT'ye kalan\n"
+                  "`/yks TYT` - TYT sayacı\n"
+                  "`/yks AYT` - AYT sayacı\n"
                   "`/yks hepsi` - Tüm sınavlar",
             inline=True
         )
         
         embed.add_field(
             name="📅 Özel Günler",
-            value="`!sayac` - Yaklaşan günler\n"
-                  "`!sayac ramazan`\n"
-                  "`!sayac kurban`\n"
-                  "`!sayac 29 ekim`\n"
+            value="`/sayaç` - Yaklaşan günler\n"
+                  "`/sayaç ramazan`\n"
+                  "`/sayaç kurban`\n"
+                  "`/sayaç 29 ekim`\n"
                   "`/sayaç yılbaşı`",
             inline=True
         )
@@ -664,6 +714,7 @@ class Yardim(commands.Cog):
         embed.set_footer(text="💡 /sayaç yazınca autocomplete ile ara!")
         
         await ctx.send(embed=embed)
+
 
 # =====================================================
 # 🔧 COG YÜKLEME
