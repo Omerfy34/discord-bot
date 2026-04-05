@@ -20,7 +20,7 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 # 👑 PATRON (SAHİP) AYARLARI
 # =====================================================
 
-PATRON_ID = 692517100144558090  # Senin Discord ID'n
+PATRON_ID = 692517100144558090
 
 # =====================================================
 # 🎵 MÜZİK AYARLARI
@@ -114,14 +114,49 @@ def check_youtube_cookies():
     else:
         return False, "Dosya bulunamadı"
 
+def get_economy(user_id):
+    """Kullanıcının ekonomi verisini al"""
+    if not economy_ref:
+        return {'para': 1000, 'banka': 0}
+    try:
+        doc = economy_ref.document(str(user_id)).get()
+        if doc.exists:
+            return doc.to_dict()
+        else:
+            data = {'para': 1000, 'banka': 0}
+            economy_ref.document(str(user_id)).set(data)
+            return data
+    except Exception as e:
+        print(f"❌ Veri okuma hatası: {e}")
+        return {'para': 1000, 'banka': 0}
+
+def update_economy(user_id, data):
+    """Kullanıcının ekonomi verisini güncelle"""
+    if not economy_ref:
+        return False
+    try:
+        economy_ref.document(str(user_id)).set(data, merge=True)
+        return True
+    except Exception as e:
+        print(f"❌ Veri yazma hatası: {e}")
+        return False
+
+def get_all_economy():
+    """Tüm ekonomi verilerini al"""
+    if not economy_ref:
+        return {}
+    try:
+        docs = economy_ref.stream()
+        return {doc.id: doc.to_dict() for doc in docs}
+    except:
+        return {}
+
 # =====================================================
 # 📊 DURUM KONTROLÜ
 # =====================================================
 
 def durum_ozeti():
     """Bot başlarken durum özeti yazdır"""
-
-    # YouTube çerez durumu
     if COOKIE_FILE and os.path.exists(COOKIE_FILE):
         cookie_ok, cookie_msg = check_youtube_cookies()
         yt_durum = f"✅ Dosya ({cookie_msg})"
@@ -145,7 +180,6 @@ def durum_ozeti():
 
 def baslangic_kontrolu():
     """Bot başlamadan önce kontrolleri yap"""
-
     hatalar = []
 
     # Token kontrolü
@@ -161,7 +195,7 @@ def baslangic_kontrolu():
     except FileNotFoundError:
         hatalar.append("FFmpeg yüklü değil!")
     except Exception:
-        pass  # İgnore
+        pass
 
     # yt-dlp kontrolü
     try:
@@ -195,6 +229,9 @@ __all__ = [
     'economy_ref',
     'warnings_ref',
     'groq_client',
+    'get_economy',
+    'update_economy',
+    'get_all_economy',
     'durum_ozeti',
     'baslangic_kontrolu',
     'check_youtube_cookies',
